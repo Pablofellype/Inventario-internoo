@@ -288,6 +288,7 @@ export const Api = {
           opc: p.tipo,
           status: p.status,
           sap: p.codigoSap || "",
+          local: p.local || "",
           its: p.itens,
           dataObj: new Date(p.data),
         }));
@@ -652,6 +653,9 @@ export const Api = {
     const iSAP = headers.findIndex(
       (h) => h.includes("SAP") || h.includes("CODIGO SAP")
     );
+    const iLOCAL = headers.findIndex(
+      (h) => h.includes("LOCAL")
+    );
 
     return lines
       .slice(1)
@@ -666,7 +670,7 @@ export const Api = {
           if (
             v &&
             v !== "" &&
-            ![iID, iDT, iMAT, iNOM, iEQU, iTIPO, iSTATUS, iSAP].includes(i)
+            ![iID, iDT, iMAT, iNOM, iEQU, iTIPO, iSTATUS, iSAP, iLOCAL].includes(i)
           ) {
             // Evita pegar colunas de controle como "LOCAL" se estiver vazia
             if (headers[i] === "ITENS" || headers[i].includes("SOLICITADOS")) {
@@ -687,6 +691,7 @@ export const Api = {
           opc: cols[iTIPO] || "Material",
           status: cols[iSTATUS] || "AGUARDANDO LIDERANÇA", // STATUS NOVO
           sap: iSAP >= 0 ? cols[iSAP] : "",
+          local: iLOCAL >= 0 ? cols[iLOCAL] || "" : "",
           its: its.join(" | ") || cols[headers.indexOf("ITENS")] || "",
           dataObj: this.converterData(cols[iDT]),
         };

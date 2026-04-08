@@ -82,11 +82,11 @@ export const UI = {
       }
 
       card.innerHTML = `
-                <div class="relative h-56 rounded-[2rem] overflow-hidden mb-6 bg-gray-100 shadow-inner group">
+                <div class="relative h-56 rounded-[2rem] overflow-hidden mb-6 bg-zinc-50 group flex items-center justify-center p-4">
                     <img src="${
                       item.f ||
                       "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800"
-                    }" class="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110">
+                    }" class="w-full h-full object-contain mix-blend-multiply transition-transform duration-700 group-hover:scale-110">
                     
                     <!-- Etiqueta Flutuante -->
                     <div class="absolute top-4 right-4 bg-white/90 backdrop-blur-md px-3 py-1.5 rounded-full shadow-lg border border-white/50">
@@ -415,7 +415,7 @@ export const UI = {
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-3 mt-2">
+                        <div class="grid grid-cols-${p.local ? '3' : '2'} gap-3 mt-2">
                             <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
                                 <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Matrícula</p>
                                 <p class="text-base font-black text-zinc-900">${
@@ -428,6 +428,12 @@ export const UI = {
                                   p.equ
                                 }</p>
                             </div>
+                            ${p.local ? `<div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
+                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Local</p>
+                                <p class="text-sm font-black text-zinc-900 truncate">${
+                                  p.local.replace('DML_', '').replace('_', ' ')
+                                }</p>
+                            </div>` : ''}
                         </div>
                     </div>
 
@@ -627,25 +633,22 @@ export const UI = {
       showCloseButton: true,
       width: larguraPopup,
       html: `
-        <div class="text-left overflow-hidden bg-white text-gray-900 shadow-xl text-left rounded-[2rem]">
-          <div class="relative h-40 bg-gray-100">
+        <div class="text-left overflow-hidden bg-white text-gray-900 shadow-xl rounded-[2rem]">
+          <div class="relative bg-zinc-50 flex items-center justify-center p-6" style="min-height:180px;">
             <img src="${
               item.f ||
               "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?q=80&w=800"
-            }" class="w-full h-full object-cover">
-            <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
-            <div class="absolute bottom-4 left-6 right-6 text-left">
-              <h2 class="text-2xl font-black uppercase italic leading-none mb-1 text-white drop-shadow-md break-words">${
+            }" class="max-h-44 w-auto object-contain mix-blend-multiply">
+          </div>
+          <div class="p-5 sm:p-6 text-left text-gray-900">
+            <h2 class="text-lg sm:text-xl font-black uppercase leading-tight mb-1 text-zinc-900 break-words">${
                 item.root
               }</h2>
-              <p class="text-white/80 font-bold uppercase tracking-widest text-[10px]">Variações</p>
-            </div>
-          </div>
-          <div class="p-6 text-left text-gray-900">
-            <div class="grid grid-cols-1 gap-2">
+            <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mb-4">Variações (${item.vars.length})</p>
+            <div class="grid grid-cols-2 gap-2">
               ${lista}
             </div>
-            <button onclick="Swal.close()" class="w-full bg-zinc-900 text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-black transition-all shadow-lg border-none cursor-pointer mt-6">Fechar</button>
+            <button onclick="Swal.close()" class="w-full bg-zinc-900 text-white py-3.5 rounded-xl font-black uppercase text-xs tracking-widest hover:bg-black transition-all shadow-lg border-none cursor-pointer mt-5">Fechar</button>
           </div>
         </div>
       `,
@@ -804,40 +807,51 @@ export const UI = {
         : "";
 
     Swal.fire({
-      title: "Gestão Rápida",
-      width: window.innerWidth < 640 ? "90%" : "32em",
+      title: "",
+      width: window.innerWidth < 640 ? "92%" : "32em",
       html: `
-                <div class="flex flex-col gap-3 mt-6">
+                <div class="flex flex-col gap-3">
+                    <div class="text-center mb-2">
+                        <div class="w-14 h-14 bg-gradient-to-br from-red-50 to-red-100 rounded-full flex items-center justify-center mx-auto mb-3 text-[#F40009] shadow-[0_4px_15px_rgba(244,0,9,0.1)]">
+                            <i data-lucide="settings" class="w-7 h-7"></i>
+                        </div>
+                        <h3 class="text-xl font-black text-zinc-900">Gestão Rápida</h3>
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1">Ferramentas administrativas</p>
+                    </div>
+
                     ${btnNotificacoes}
-                    
-                    <button onclick="Sistema.abrirPopupIdeias()" class="w-full bg-white text-zinc-800 border-2 border-gray-100 py-5 rounded-2xl font-bold hover:border-yellow-400 hover:bg-yellow-50 transition-all flex items-center px-6 gap-4 group text-left shadow-sm">
-                        <div class="w-10 h-10 bg-yellow-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+
+                    <button onclick="Sistema.abrirPopupIdeias()" class="w-full bg-zinc-50 text-zinc-800 border-2 border-transparent py-4 rounded-2xl font-bold hover:border-yellow-400 hover:bg-yellow-50 transition-all flex items-center px-5 gap-4 group text-left active:scale-[0.98]">
+                        <div class="w-11 h-11 bg-yellow-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                             <i data-lucide="lightbulb" class="w-5 h-5 text-yellow-600"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-black uppercase text-zinc-900">Nova Sugestão</p>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase">Ideias & Inovação</p>
+                            <p class="text-[10px] text-zinc-400 font-bold uppercase">Ideias & Inovação</p>
                         </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-yellow-500 transition-colors"></i>
                     </button>
-                    
-                    <button onclick="UI.abrirContencaoLateral()" class="w-full bg-white text-zinc-800 border-2 border-gray-100 py-5 rounded-2xl font-bold hover:border-orange-400 hover:bg-orange-50 transition-all flex items-center px-6 gap-4 group text-left shadow-sm">
-                        <div class="w-10 h-10 bg-orange-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+
+                    <button onclick="UI.abrirContencaoLateral()" class="w-full bg-zinc-50 text-zinc-800 border-2 border-transparent py-4 rounded-2xl font-bold hover:border-orange-400 hover:bg-orange-50 transition-all flex items-center px-5 gap-4 group text-left active:scale-[0.98]">
+                        <div class="w-11 h-11 bg-orange-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                             <i data-lucide="archive" class="w-5 h-5 text-orange-600"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-black uppercase text-zinc-900">Contenção Lateral</p>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase">Controle de Estoque</p>
+                            <p class="text-[10px] text-zinc-400 font-bold uppercase">Controle de Estoque</p>
                         </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-orange-500 transition-colors"></i>
                     </button>
 
-                    <button onclick="Sistema.solicitarAcessoAdmin()" class="w-full bg-white text-zinc-800 border-2 border-gray-100 py-5 rounded-2xl font-bold hover:border-red-400 hover:bg-red-50 transition-all flex items-center px-6 gap-4 group text-left shadow-sm">
-                        <div class="w-10 h-10 bg-red-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
+                    <button onclick="Sistema.solicitarAcessoAdmin()" class="w-full bg-zinc-50 text-zinc-800 border-2 border-transparent py-4 rounded-2xl font-bold hover:border-red-400 hover:bg-red-50 transition-all flex items-center px-5 gap-4 group text-left active:scale-[0.98]">
+                        <div class="w-11 h-11 bg-red-100 rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform">
                             <i data-lucide="lock" class="w-5 h-5 text-red-600"></i>
                         </div>
                         <div class="flex-1">
                             <p class="text-sm font-black uppercase text-zinc-900">Acesso Admin</p>
-                            <p class="text-[10px] text-gray-400 font-bold uppercase">Área Restrita</p>
+                            <p class="text-[10px] text-zinc-400 font-bold uppercase">Área Restrita</p>
                         </div>
+                        <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-red-500 transition-colors"></i>
                     </button>
                 </div>
             `,

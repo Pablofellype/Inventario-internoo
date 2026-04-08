@@ -163,7 +163,7 @@ export const PublicForm = {
             </div>
 
             <!-- Seção Limpeza -->
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 mb-2 pl-1">Limpeza</p>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-900 mb-2 pl-1">Limpeza</p>
             <div class="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
                 <button onclick="PublicForm.selecionarEquipe('DIURNO')" class="group p-4 sm:p-5 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer text-center active:scale-95">
                     <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 mx-auto mb-3 group-hover:bg-amber-100 transition-colors"><i data-lucide="sun" class="w-5 h-5"></i></div>
@@ -178,7 +178,7 @@ export const PublicForm = {
             </div>
 
             <!-- Seção Segurança -->
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-300 mb-2 pl-1">Segurança Patrimonial</p>
+            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-900 mb-2 pl-1">Segurança Patrimonial</p>
             <div class="grid grid-cols-2 gap-2 sm:gap-3">
                 <button onclick="PublicForm.selecionarEquipe('SEGURANCA_DIURNO')" class="group p-4 sm:p-5 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer text-center active:scale-95">
                     <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 mx-auto mb-3 group-hover:bg-amber-100 transition-colors"><i data-lucide="shield" class="w-5 h-5"></i></div>
@@ -313,14 +313,9 @@ export const PublicForm = {
 
         let htmlLista = `
         <div class="animate-entrada-suave pb-24">
-            <div class="flex items-center gap-3 mb-5 sm:mb-6">
-                <button onclick="${acaoVoltar}" class="w-9 h-9 sm:w-10 sm:h-10 bg-zinc-50 rounded-full flex items-center justify-center text-zinc-400 hover:bg-red-50 hover:text-[#F40009] transition-all flex-shrink-0 active:scale-90">
-                    <i data-lucide="arrow-left" class="w-4 h-4 sm:w-5 sm:h-5"></i>
-                </button>
-                <div class="flex-1 min-w-0">
-                    <h3 class="text-base sm:text-lg font-black text-zinc-900 uppercase leading-none truncate">${categoriaID.replace('_', ' ').replace('SOLICITACAO', '')}</h3>
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Selecione os itens e quantidades</p>
-                </div>
+            <div class="mb-5 sm:mb-6">
+                <h3 class="text-base sm:text-lg font-black text-zinc-900 uppercase leading-none truncate">${categoriaID.replace('_', ' ').replace('SOLICITACAO', '')}</h3>
+                <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Selecione os itens e quantidades</p>
             </div>
 
             <div class="grid grid-cols-2 gap-2 sm:gap-3">`;
@@ -540,6 +535,18 @@ export const PublicForm = {
                         </div>
                         <span class="text-[10px] font-mono font-bold text-zinc-400 bg-white px-3 py-1.5 rounded-lg border border-zinc-100">MAT: ${this.dadosPedido.matricula}</span>
                     </div>
+                </div>
+
+                <!-- Card equipe e DML -->
+                <div class="flex gap-2 mb-3">
+                    <div class="bg-zinc-50 rounded-2xl p-3 sm:p-4 flex-1">
+                        <p class="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Equipe</p>
+                        <p class="font-black text-sm text-zinc-900 mt-0.5 uppercase">${this.dadosPedido.equipe.replace('_', ' ')}</p>
+                    </div>
+                    ${this.dadosPedido.setorDML ? `<div class="bg-zinc-50 rounded-2xl p-3 sm:p-4 flex-1">
+                        <p class="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Local (DML)</p>
+                        <p class="font-black text-sm text-zinc-900 mt-0.5 uppercase">${this.dadosPedido.setorDML.replace('DML_', '').replace('_', ' ')}</p>
+                    </div>` : ''}
                 </div>
 
                 <!-- Card dos itens -->
