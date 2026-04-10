@@ -43,6 +43,13 @@
             animation: {
               "entrada-suave": "cardSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
               emergir: "popIn 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+              "fade-up": "fadeUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+              "scale-in": "scaleIn 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards",
+              "slide-right": "slideRight 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+              "pulse-soft": "pulseSoft 2s ease-in-out infinite",
+              "float": "floatY 3s ease-in-out infinite",
+              "slide-up": "slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+              "fade-in": "fadeIn 0.3s ease forwards",
             },
             keyframes: {
               cardSlideUp: {
@@ -52,6 +59,34 @@
               popIn: {
                 "0%": { opacity: "0", transform: "scale(0.95) translateY(10px)" },
                 "100%": { opacity: "1", transform: "scale(1) translateY(0)" },
+              },
+              fadeUp: {
+                "0%": { opacity: "0", transform: "translateY(30px) scale(0.97)" },
+                "100%": { opacity: "1", transform: "translateY(0) scale(1)" },
+              },
+              scaleIn: {
+                "0%": { opacity: "0", transform: "scale(0.8)" },
+                "100%": { opacity: "1", transform: "scale(1)" },
+              },
+              slideRight: {
+                "0%": { opacity: "0", transform: "translateX(-20px)" },
+                "100%": { opacity: "1", transform: "translateX(0)" },
+              },
+              pulseSoft: {
+                "0%, 100%": { opacity: "1" },
+                "50%": { opacity: "0.7" },
+              },
+              floatY: {
+                "0%, 100%": { transform: "translateY(0)" },
+                "50%": { transform: "translateY(-6px)" },
+              },
+              slideUp: {
+                "0%": { opacity: "0", transform: "translateY(100%)" },
+                "100%": { opacity: "1", transform: "translateY(0)" },
+              },
+              fadeIn: {
+                "0%": { opacity: "0" },
+                "100%": { opacity: "1" },
               },
             },
           },
@@ -65,105 +100,118 @@
 
     <div
       id="telaLogin"
-      class="fixed inset-0 z-[2000] flex items-center justify-center p-4 md:p-10 bg-[#f6f4ef] text-zinc-900 overflow-hidden transition-all duration-1000"
+      class="fixed inset-0 z-[2000] flex flex-col text-zinc-900 overflow-hidden transition-all duration-1000"
+      style="font-family: 'Space Grotesk', sans-serif; background: #fff;"
     >
-        <div class="absolute -top-48 -right-24 w-[520px] h-[520px] rounded-full bg-[#F40009]/15 blur-3xl"></div>
-        <div class="absolute -top-32 -left-24 w-[420px] h-[420px] rounded-full bg-[#F40009]/10 blur-3xl"></div>
-        <div class="absolute top-40 left-1/2 -translate-x-1/2 w-[120%] h-40 bg-white/70 blur-3xl"></div>
-        <div class="absolute -bottom-28 right-0 w-[420px] h-[420px] rounded-full bg-[#F40009]/10 blur-3xl"></div>
-
-        <div class="relative w-full max-w-6xl grid gap-8 lg:grid-cols-[1.5fr_0.5fr] items-start" style="font-family: 'Space Grotesk', sans-serif;">
-            <section class="order-1 bg-white rounded-[2.6rem] shadow-[0_32px_90px_rgba(0,0,0,0.14)] border border-zinc-100 p-5 sm:p-7 md:p-10 animate-entrada-suave">
-                <div class="flex items-center gap-3 text-white font-black uppercase tracking-[0.25em] text-[9px] sm:text-[10px] md:text-[11px] bg-[#F40009] px-4 py-2 rounded-full w-fit">
-                    <span>Portal do Colaborador</span>
-                    <span class="hidden sm:inline-flex items-center gap-2">
-                        <span class="w-2 h-2 rounded-full bg-white"></span>
-                        Sem senha
-                    </span>
-                    <span class="sm:hidden w-2 h-2 rounded-full bg-white"></span>
+        <!-- Barra vermelha no topo -->
+        <div class="w-full bg-[#F40009] px-5 py-2.5 sm:py-3 flex items-center justify-between flex-shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-6 h-6 bg-white/20 rounded-md flex items-center justify-center">
+                    <i data-lucide="package" class="w-3.5 h-3.5 text-white"></i>
                 </div>
-                <h1 class="mt-5 sm:mt-6 text-3xl sm:text-4xl md:text-6xl font-black uppercase italic tracking-tight text-zinc-900">
-                    Solicitação de Material
-                </h1>
-                <p class="mt-3 text-sm text-zinc-600 font-medium max-w-2xl sm:hidden">
-                    Solicite rápido e acompanhe o status.
-                </p>
-                <p class="mt-4 text-sm md:text-base text-zinc-600 font-medium max-w-2xl hidden sm:block">
-                    Clique, preencha e acompanhe. Tudo em um fluxo rápido e direto.
-                </p>
-                <p class="mt-5 text-[10px] uppercase tracking-widest text-zinc-500 font-black sm:hidden">
-                    3 passos rápidos: Preencher • Enviar • Rastrear
-                </p>
-                <div class="mt-7 hidden sm:grid gap-3 sm:grid-cols-3">
-                    <div class="bg-[#fafafa] border border-zinc-200/70 rounded-2xl p-4">
-                        <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-black">1. Preencher</p>
-                        <p class="text-sm font-semibold text-zinc-900 mt-2">Sem cadastro, sem demora.</p>
-                    </div>
-                    <div class="bg-[#fafafa] border border-zinc-200/70 rounded-2xl p-4">
-                        <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-black">2. Enviar</p>
-                        <p class="text-sm font-semibold text-zinc-900 mt-2">Confirmação instantânea.</p>
-                    </div>
-                    <div class="bg-[#fafafa] border border-zinc-200/70 rounded-2xl p-4">
-                        <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-black">3. Rastrear</p>
-                        <p class="text-sm font-semibold text-zinc-900 mt-2">Status atualizado na hora.</p>
-                    </div>
-                </div>
-                <div class="mt-7 sm:mt-8 flex flex-col md:flex-row gap-4">
-                    <button onclick="PublicForm.abrir()" class="group relative bg-[#F40009] text-white px-6 py-4 md:px-10 md:py-5 rounded-2xl font-black uppercase tracking-widest shadow-[0_20px_50px_rgba(244,0,9,0.35)] hover:scale-[1.02] active:scale-95 transition-all w-full flex items-center justify-center gap-3 border-none cursor-pointer text-xs md:text-base">
-                        <i data-lucide="user-plus" class="w-4 h-4 md:w-5 md:h-5"></i>
-                        Solicitar Material
-                    </button>
-                    <button onclick="Sistema.abrirRastreio()" class="bg-white border border-zinc-300 text-zinc-700 px-6 py-4 md:px-10 md:py-5 rounded-2xl font-black uppercase tracking-widest shadow-lg hover:text-[#F40009] hover:border-[#F40009]/40 transition-all w-full flex items-center justify-center gap-3 text-[10px] md:text-xs cursor-pointer">
-                        <i data-lucide="search" class="w-4 h-4 md:w-5 md:h-5"></i>
-                        Rastrear Pedido <span class="hidden sm:inline">/ Esqueci ID</span>
-                    </button>
-                </div>
-            </section>
-
-            <aside class="order-2 bg-white rounded-[2rem] shadow-[0_24px_70px_rgba(0,0,0,0.12)] border border-zinc-200/70 p-4 sm:p-5 md:p-6 animate-emergir">
-                <div class="bg-zinc-900 text-white rounded-2xl p-3 sm:p-4 mb-4">
-                    <div class="flex items-center justify-between">
-                        <h2 class="text-[10px] sm:text-[11px] md:text-xs font-black uppercase tracking-[0.3em]">Acesso Administrativo</h2>
-                        <span class="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-[#F40009]">Inventário</span>
-                    </div>
-                    <p class="text-[10px] md:text-xs text-white/70 font-semibold mt-2 hidden sm:block">Somente equipe administrativa.</p>
-                    <p class="text-[10px] text-white/60 font-semibold mt-2 sm:hidden">Administração</p>
-                </div>
-                <div id="caixaLogin" class="bg-[#f7f7f7] border border-zinc-200 p-2 rounded-[1.25rem] md:rounded-[1.5rem] w-full shadow-lg flex items-center gap-2 pl-4 pr-2 py-2 transition-all relative">
-                    <div id="indicadorCaps" class="hidden absolute left-4 text-[#F40009] animate-pulse transition-all" title="Caps Lock Ativado">
-                        <i data-lucide="arrow-big-up" class="w-5 h-5 md:w-6 md:h-6"></i>
-                    </div>
-                    <input type="password" id="senhaAcesso" placeholder="SENHA ADMIN" class="bg-transparent border-none text-zinc-900 placeholder-zinc-400 outline-none flex-1 font-black tracking-widest text-center h-10 md:h-12 text-base md:text-lg z-10">
-                    <button type="button" onclick="Sistema.alternarVerSenha()" class="text-zinc-400 hover:text-zinc-900 transition-colors cursor-pointer border-none bg-transparent p-2 z-20" title="Ver Senha">
-                        <i id="iconeOlho" data-lucide="eye" class="w-5 h-5"></i>
-                    </button>
-                    <button onclick="Sistema.autenticar(event)" class="bg-zinc-900 text-white w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl flex items-center justify-center shadow-lg hover:scale-105 active:scale-95 transition-all cursor-pointer border-none flex-shrink-0 z-20">
-                        <i data-lucide="arrow-right" class="w-5 h-5 md:w-6 md:h-6"></i>
-                    </button>
-                </div>
-            </aside>
+                <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-white">Portal do Colaborador</span>
+            </div>
+            <div class="flex items-center gap-2">
+                <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-soft"></div>
+                <span class="text-[8px] sm:text-[9px] font-bold uppercase tracking-widest text-white/60 hidden sm:block">Online</span>
+            </div>
         </div>
 
-        <!-- Rodapé removido a pedido -->
+        <!-- Conteúdo Principal -->
+        <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+
+            <!-- Lado Esquerdo - Hero -->
+            <div class="flex-1 flex flex-col justify-center px-6 sm:px-10 md:px-16 lg:px-20 py-8 sm:py-12 relative overflow-hidden">
+                <!-- Detalhe visual sutil -->
+                <div class="absolute top-0 right-0 w-64 h-64 opacity-[0.03] pointer-events-none" style="background: repeating-linear-gradient(45deg, #F40009 0px, #F40009 1px, transparent 1px, transparent 12px);"></div>
+                <div class="absolute bottom-10 left-10 w-40 h-40 rounded-full border border-zinc-100 pointer-events-none hidden lg:block"></div>
+
+                <div class="max-w-xl relative">
+                    <div class="flex items-center gap-3 mb-5 sm:mb-6 opacity-0 animate-fade-up">
+                        <div class="h-[2px] w-10 bg-[#F40009] rounded-full"></div>
+                        <span class="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-400">Rápido e sem burocracia</span>
+                    </div>
+
+                    <h1 class="text-[2.6rem] sm:text-5xl md:text-6xl lg:text-7xl font-black uppercase tracking-tight text-zinc-900 leading-[0.9] opacity-0 animate-fade-up" style="animation-delay: 0.08s">
+                        Solicitação<br>de Material
+                    </h1>
+
+                    <p class="mt-4 sm:mt-5 text-[13px] sm:text-base text-zinc-400 max-w-md leading-relaxed opacity-0 animate-fade-up" style="animation-delay: 0.16s">
+                        Selecione os itens, envie e acompanhe seu pedido em tempo real. Tudo em poucos cliques.
+                    </p>
+
+                    <!-- Passos -->
+                    <div class="mt-7 sm:mt-8 flex items-center gap-3 sm:gap-5 opacity-0 animate-fade-up" style="animation-delay: 0.24s">
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-zinc-900 text-white text-[10px] font-black flex items-center justify-center">01</span>
+                            <span class="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase">Preencha</span>
+                        </div>
+                        <div class="w-5 h-px bg-zinc-200"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-zinc-900 text-white text-[10px] font-black flex items-center justify-center">02</span>
+                            <span class="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase">Envie</span>
+                        </div>
+                        <div class="w-5 h-px bg-zinc-200"></div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-7 h-7 rounded-lg bg-zinc-900 text-white text-[10px] font-black flex items-center justify-center">03</span>
+                            <span class="text-[10px] sm:text-xs font-bold text-zinc-500 uppercase">Rastreie</span>
+                        </div>
+                    </div>
+
+                    <!-- Botões -->
+                    <div class="mt-9 sm:mt-10 flex flex-col sm:flex-row gap-3 opacity-0 animate-fade-up" style="animation-delay: 0.32s">
+                        <button onclick="PublicForm.abrir()" class="group bg-[#F40009] text-white px-8 py-4 sm:py-5 rounded-xl font-black uppercase tracking-widest shadow-[0_8px_30px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-3 border-none cursor-pointer text-xs sm:text-sm">
+                            Solicitar Material
+                            <i data-lucide="arrow-right" class="w-4 h-4 group-hover:translate-x-1 transition-transform"></i>
+                        </button>
+                        <button onclick="Sistema.abrirRastreio()" class="border-2 border-zinc-200 text-zinc-500 px-8 py-4 sm:py-5 rounded-xl font-black uppercase tracking-widest hover:border-zinc-400 hover:text-zinc-900 transition-all duration-200 flex items-center justify-center gap-3 text-[10px] sm:text-xs cursor-pointer bg-transparent">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                            Rastrear Pedido
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Lado Direito - Admin -->
+            <div class="lg:w-80 xl:w-96 bg-zinc-50/80 border-t lg:border-t-0 lg:border-l border-zinc-100 flex flex-col justify-center px-6 sm:px-8 py-6 sm:py-10 lg:py-0 opacity-0 animate-fade-up" style="animation-delay: 0.4s">
+                <div class="max-w-sm mx-auto lg:mx-0 w-full">
+                    <div class="flex items-center gap-2 mb-1">
+                        <i data-lucide="shield" class="w-3.5 h-3.5 text-zinc-400"></i>
+                        <h2 class="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-900">Administração</h2>
+                    </div>
+                    <p class="text-[10px] text-zinc-400 mb-5">Acesso restrito para equipe do inventário</p>
+                    <div id="caixaLogin" class="bg-white border border-zinc-200 p-1.5 rounded-xl w-full flex items-center gap-2 pl-4 transition-all relative focus-within:border-zinc-400 focus-within:shadow-sm">
+                        <div id="indicadorCaps" class="hidden absolute left-4 text-[#F40009] animate-pulse transition-all" title="Caps Lock Ativado">
+                            <i data-lucide="arrow-big-up" class="w-5 h-5"></i>
+                        </div>
+                        <input type="password" id="senhaAcesso" placeholder="Senha de acesso" class="bg-transparent border-none text-zinc-900 placeholder-zinc-300 outline-none flex-1 font-bold tracking-wider h-11 text-sm z-10">
+                        <button type="button" onclick="Sistema.alternarVerSenha()" class="text-zinc-300 hover:text-zinc-500 transition-colors cursor-pointer border-none bg-transparent p-2 z-20" title="Ver Senha">
+                            <i id="iconeOlho" data-lucide="eye" class="w-4 h-4"></i>
+                        </button>
+                        <button onclick="Sistema.autenticar(event)" class="bg-zinc-900 text-white w-11 h-11 rounded-lg flex items-center justify-center hover:bg-[#F40009] active:scale-95 transition-all duration-200 cursor-pointer border-none flex-shrink-0 z-20">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <div id="containerFormularioPublico" class="hidden fixed inset-0 z-[2100] flex flex-col animate-entrada-suave" style="font-family: 'Space Grotesk', sans-serif; background: linear-gradient(160deg, #fefefe 0%, #fff5f5 40%, #fef2f2 100%);">
-        <div class="bg-white/80 backdrop-blur-xl px-4 py-3 md:px-6 md:py-4 flex items-center justify-between z-10 border-b border-red-100/50 shadow-[0_2px_20px_rgba(244,0,9,0.04)]">
-            <button onclick="PublicForm.voltarEtapa()" class="w-10 h-10 rounded-full bg-zinc-50 hover:bg-red-50 text-zinc-400 hover:text-[#F40009] transition-all flex items-center justify-center border-none cursor-pointer active:scale-90">
-                <i data-lucide="arrow-left" class="w-5 h-5"></i>
+    <div id="containerFormularioPublico" class="hidden fixed inset-0 z-[2100] flex flex-col" style="font-family: 'Space Grotesk', sans-serif; background: #fff;">
+        <!-- Barra vermelha topo (igual login) -->
+        <div class="w-full bg-[#F40009] px-4 py-2 flex items-center justify-between flex-shrink-0 z-10">
+            <button onclick="PublicForm.voltarEtapa()" class="w-8 h-8 rounded-md bg-white/15 hover:bg-white/25 text-white transition-all flex items-center justify-center border-none cursor-pointer active:scale-90">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
             </button>
-            <div class="text-center flex-1">
-                <div class="flex items-center justify-center gap-2 mb-0.5">
-                    <div class="w-1.5 h-1.5 rounded-full bg-[#F40009]"></div>
-                    <h2 class="text-[11px] font-black text-zinc-800 uppercase tracking-[0.25em]">Nova Solicitação</h2>
-                </div>
-                <p id="contadorEtapa" class="text-[10px] font-bold text-[#F40009]/70 uppercase tracking-wide">Identificação (1/5)</p>
+            <div class="text-center flex-1 mx-3">
+                <h2 class="text-[10px] font-black text-white uppercase tracking-[0.3em]">Nova Solicitação</h2>
+                <p id="contadorEtapa" class="text-[9px] font-bold text-white/60 uppercase tracking-wide">Identificação (1/5)</p>
             </div>
-            <div class="w-10"></div>
+            <div class="w-8"></div>
         </div>
-        <div class="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 relative">
+        <div class="flex-1 overflow-y-auto px-5 sm:px-8 py-6 sm:py-10 relative">
             <div class="max-w-lg mx-auto">
-                <div id="areaEtapas" class="bg-white rounded-[2rem] sm:rounded-[2.5rem] shadow-[0_20px_60px_rgba(0,0,0,0.08),0_0_0_1px_rgba(0,0,0,0.03)] p-5 sm:p-7 md:p-10"></div>
+                <div id="areaEtapas" class=""></div>
             </div>
         </div>
     </div>
@@ -177,102 +225,136 @@
       </button>
     </div>
 
-    <div id="appPrincipal" class="hidden opacity-0 transition-all duration-700">
-      <header class="fixed top-0 w-full z-[100] px-2 py-4 md:px-4 md:py-6">
-        <div class="max-w-7xl mx-auto superficie-elevada rounded-[2rem] md:rounded-[2.5rem] p-2 md:p-3 flex items-center justify-between shadow-xl">
-          <div class="flex items-center gap-3 md:gap-5">
-            <div class="relative">
-              <button onclick="Sistema.home()" class="w-12 h-12 md:w-14 md:h-14 gradiente-andina rounded-2xl flex items-center justify-center shadow-lg active:scale-90 transition-all cursor-pointer border-none text-white">
-                <i data-lucide="layout-grid" class="w-6 h-6 md:w-7 md:h-7"></i>
-              </button>
-              <div id="indicadorRede" class="absolute -top-1 -right-1 w-3 h-3 md:w-4 md:h-4 rounded-full border-2 border-white bg-emerald-500 shadow-sm transition-colors" title="Status da Rede"></div>
-            </div>
-            <div class="hidden lg:block border-l border-gray-100 pl-6">
-              <div id="statusLigacao" class="status-badge status-online mb-1">Conectado</div>
-              <h1 id="tituloPagina" class="text-xl font-black text-gray-900 uppercase italic leading-none text-zinc-900">Painel Inicial</h1>
-            </div>
+    <div id="appPrincipal" class="hidden opacity-0 transition-all duration-700" style="font-family: 'Space Grotesk', sans-serif;">
+      <!-- Barra vermelha topo (igual login) -->
+      <div class="fixed top-0 w-full z-[110] bg-[#F40009] px-4 sm:px-6 py-2.5 flex items-center justify-between">
+        <div class="flex items-center gap-2.5">
+          <button onclick="Sistema.home()" class="w-7 h-7 bg-white/20 rounded-md flex items-center justify-center border-none cursor-pointer active:scale-90 transition-all">
+            <i data-lucide="layout-grid" class="w-3.5 h-3.5 text-white"></i>
+          </button>
+          <div class="relative">
+            <span class="text-[9px] sm:text-[10px] font-black uppercase tracking-[0.3em] text-white">Painel Admin</span>
+            <div id="indicadorRede" class="absolute -top-1 -right-2 w-2.5 h-2.5 rounded-full border-2 border-[#F40009] bg-emerald-400 shadow-sm transition-colors" title="Status da Rede"></div>
           </div>
-          <div class="flex-1 max-w-xl mx-2 md:mx-8 relative">
+        </div>
+        <div class="flex items-center gap-3">
+          <div id="statusLigacao" class="hidden sm:flex items-center gap-1.5">
+            <div class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse-soft"></div>
+            <span class="text-[8px] font-bold uppercase tracking-widest text-white/60">Conectado</span>
+          </div>
+          <button onclick="Sistema.encerrar()" class="w-7 h-7 bg-white/10 hover:bg-white/25 rounded-md flex items-center justify-center text-white transition-all cursor-pointer border-none">
+            <i data-lucide="log-out" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <header class="fixed top-[44px] w-full z-[100] px-3 py-3 md:px-5 md:py-4 bg-white/80 backdrop-blur-xl border-b border-zinc-100">
+        <div class="max-w-6xl mx-auto flex items-center gap-3">
+          <h1 id="tituloPagina" class="text-sm sm:text-base font-black text-zinc-900 uppercase tracking-tight leading-none whitespace-nowrap">Painel Inicial</h1>
+          <div class="flex-1 max-w-xl relative">
             <div class="relative">
-              <input type="text" id="campoBusca" onkeyup="Sistema.processarBuscaSpotlight(this.value)" placeholder="Procurar..." class="w-full bg-gray-50 border-none py-3 md:py-4 pl-10 md:pl-12 pr-4 md:pr-6 rounded-2xl outline-none focus:ring-4 focus:ring-red-500/5 transition-all text-xs md:text-sm font-medium text-gray-900" />
-              <i data-lucide="search" class="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400 text-zinc-900"></i>
+              <input type="text" id="campoBusca" onkeyup="Sistema.processarBuscaSpotlight(this.value)" placeholder="Procurar..." class="w-full bg-zinc-50 border border-zinc-200 py-2.5 pl-9 pr-4 rounded-xl outline-none focus:border-zinc-400 focus:bg-white transition-all text-xs font-medium text-zinc-900" />
+              <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-zinc-400"></i>
             </div>
             <div id="spotlightResults" class="spotlight-results hidden"></div>
           </div>
-          <button onclick="Sistema.encerrar()" class="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center rounded-2xl hover:bg-gray-50 text-gray-300 hover:text-red-500 transition-all cursor-pointer border-none bg-transparent">
-            <i data-lucide="log-out" class="w-5 h-5 md:w-6 md:h-6"></i>
-          </button>
         </div>
       </header>
 
-      <main class="pt-32 md:pt-40 pb-32 md:pb-64 px-4 md:px-6 max-w-[1600px] mx-auto text-gray-900">
+      <main class="pt-[120px] md:pt-[130px] pb-32 md:pb-48 px-4 md:px-6 max-w-6xl mx-auto text-zinc-900">
         <div id="containerHome" class="animate-entrada-suave text-zinc-900">
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-8 mb-12 text-zinc-900">
-            
-            <div class="bg-white p-6 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-white flex flex-col h-80 shadow-md relative overflow-hidden group hover:border-red-500 transition-all">
-              <div class="flex justify-between items-start mb-4 z-10">
-                <div>
-                  <h3 class="text-xl font-black uppercase text-zinc-900 leading-none">Últimos<br /><span class="text-red-600">Pedidos</span></h3>
+
+          <!-- Cards principais -->
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mb-10 text-zinc-900">
+
+            <!-- Últimos Pedidos -->
+            <div class="bg-white p-5 rounded-2xl border border-zinc-100 flex flex-col h-72 relative overflow-hidden group hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+              <div class="flex justify-between items-center mb-4 z-10">
+                <div class="flex items-center gap-2.5">
+                  <div class="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
+                    <i data-lucide="activity" class="w-4 h-4 text-red-500"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-sm font-black uppercase text-zinc-900 leading-none">Últimos <span class="text-red-600">Pedidos</span></h3>
+                  </div>
                 </div>
-                <button onclick="Sistema.selecionarSetor('PEDIDOS_LOG', 'Monitor de Solicitações')" class="w-10 h-10 rounded-full bg-red-50 flex items-center justify-center text-red-600 hover:bg-red-600 hover:text-white transition-all cursor-pointer shadow-sm border-none" title="Ver Todos">
-                  <i data-lucide="arrow-right" class="w-5 h-5"></i>
+                <button onclick="Sistema.selecionarSetor('PEDIDOS_LOG', 'Monitor de Solicitações')" class="w-8 h-8 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 hover:bg-red-500 hover:text-white transition-all cursor-pointer border-none" title="Ver Todos">
+                  <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
               </div>
               <div id="widgetUltimosPedidos" class="flex-1 overflow-y-auto pr-1 space-y-2 relative z-10 custom-scroll">
-                <p class="text-xs text-gray-400 animate-pulse mt-4">A carregar...</p>
+                <p class="text-xs text-zinc-400 animate-pulse mt-4">A carregar...</p>
               </div>
-              <i data-lucide="activity" class="absolute -bottom-4 -right-4 w-32 h-32 text-gray-50 z-0 group-hover:text-red-50 transition-colors"></i>
             </div>
 
-            <div onclick="UI.abrirContencaoLateral()" class="bg-white p-6 md:p-10 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-white h-auto md:h-80 flex flex-col justify-center text-center shadow-md cursor-pointer hover:border-orange-400 transition-all group">
-              <div class="w-16 h-16 bg-orange-50 rounded-full flex items-center justify-center mx-auto mb-6 group-hover:bg-orange-100 transition-colors">
-                <i data-lucide="archive" class="text-orange-500 w-8 h-8"></i>
+            <!-- Contenção Lateral -->
+            <div onclick="UI.abrirContencaoLateral()" class="bg-white p-5 rounded-2xl border border-zinc-100 h-auto md:h-72 flex flex-col justify-center text-center cursor-pointer hover:border-orange-200 transition-all group shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+              <div class="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center mx-auto mb-5 group-hover:bg-orange-100 group-hover:scale-105 transition-all">
+                <i data-lucide="archive" class="text-orange-500 w-7 h-7"></i>
               </div>
-              <h3 class="text-lg font-black uppercase mb-1 text-zinc-900">Contenção Lateral</h3>
-              <p class="text-gray-400 text-xs italic uppercase tracking-widest text-zinc-400">Controle de Estoque Rápido</p>
+              <h3 class="text-sm font-black uppercase mb-1 text-zinc-900">Contenção Lateral</h3>
+              <p class="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Controle de Estoque Rápido</p>
             </div>
 
-            <div class="bg-white p-6 rounded-[2.5rem] md:rounded-[3rem] shadow-sm border border-white flex flex-col h-80 shadow-md relative overflow-hidden group hover:border-orange-500 transition-all">
-                <div class="flex justify-between items-start mb-2 z-10">
-                    <div>
-                        <h3 class="text-xl font-black uppercase text-zinc-900 leading-none">
-                            Estoque<br /><span class="text-orange-600">Crítico</span>
-                        </h3>
-                         <p class="text-zinc-400 text-[9px] md:text-[10px] mt-2 font-bold uppercase tracking-widest italic opacity-60 text-left">
-                        Contenção (&lt; 5 un)
-                      </p>
+            <!-- Estoque Crítico -->
+            <div class="bg-white p-5 rounded-2xl border border-zinc-100 flex flex-col h-72 relative overflow-hidden group hover:border-orange-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <div class="flex justify-between items-center mb-4 z-10">
+                    <div class="flex items-center gap-2.5">
+                      <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
+                        <i data-lucide="alert-triangle" class="w-4 h-4 text-orange-500"></i>
+                      </div>
+                      <div>
+                        <h3 class="text-sm font-black uppercase text-zinc-900 leading-none">Estoque <span class="text-orange-600">Crítico</span></h3>
+                        <p class="text-zinc-400 text-[9px] font-bold uppercase tracking-wider mt-0.5">Contenção (&lt; 5 un)</p>
+                      </div>
                     </div>
-                    <div class="w-10 h-10 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 animate-pulse shadow-sm">
-                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                    <div class="w-8 h-8 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500 animate-pulse-soft">
+                        <i data-lucide="alert-triangle" class="w-4 h-4"></i>
                     </div>
                 </div>
 
-                <div id="widgetContencaoCritica" class="flex-1 overflow-y-auto pr-1 relative z-10 custom-scroll mt-4">
-                    <p class="text-xs text-gray-400 animate-pulse mt-4">Verificando dados...</p>
+                <div id="widgetContencaoCritica" class="flex-1 overflow-y-auto pr-1 relative z-10 custom-scroll">
+                    <p class="text-xs text-zinc-400 animate-pulse mt-4">Verificando dados...</p>
                 </div>
-
-                <i data-lucide="package-search" class="absolute -bottom-4 -right-4 w-32 h-32 text-gray-50 z-0 group-hover:text-orange-50 transition-colors"></i>
             </div>
 
           </div>
+
+          <!-- Setor de Gestão -->
           <div id="setorGestao" class="mb-12">
-            <div class="flex items-end justify-between mb-6">
-              <div>
-                <h2 class="text-xl md:text-3xl font-black italic uppercase leading-none text-gray-900">Setor de Gestao</h2>
-                <div class="w-12 md:w-16 h-1.5 bg-marca-primaria mt-3"></div>
-              </div>
+            <div class="flex items-center gap-3 mb-5">
+              <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+              <h2 class="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-900">Setor de Gestão</h2>
             </div>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 text-zinc-900">
-              <button onclick="Sistema.selecionarSetor('EPI_UNIFORME', 'EPI & Uniformes')" class="superficie-elevada p-5 md:p-10 rounded-[2.5rem] md:rounded-[3rem] text-left group text-zinc-900 cursor-pointer border-none hover:border-red-500 shadow-xl">
-                <i data-lucide="shield" class="w-8 h-8 md:w-10 md:h-10 text-zinc-300 group-hover:text-red-600 mb-6 md:mb-8 transition-colors text-gray-900"></i>
-                <h3 class="text-lg md:text-2xl font-black italic leading-none uppercase text-zinc-900">EPI &<br />Uniformes</h3>
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 text-zinc-900">
+              <button onclick="Sistema.selecionarSetor('EPI_UNIFORME', 'EPI & Uniformes')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group text-zinc-900 cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <i data-lucide="shield" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+                <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">EPI &<br />Uniformes</h3>
               </button>
-              <button onclick="Sistema.selecionarSetor('DML_COMERCIAL', 'DML Comercial')" class="card-operacional p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] text-left group cursor-pointer border-none text-zinc-400 hover:text-gray-900 italic font-bold shadow-md text-zinc-900 text-sm md:text-base">Comercial</button>
-              <button onclick="Sistema.selecionarSetor('DML_CCB', 'DML CCB')" class="card-operacional p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] text-left group cursor-pointer border-none text-zinc-400 hover:text-gray-900 italic font-bold shadow-md text-zinc-900 text-sm md:text-base">CCB</button>
-              <button onclick="Sistema.selecionarSetor('DML_ESTOQUE', 'DML Estoque')" class="card-operacional p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] text-left group cursor-pointer border-none text-zinc-400 hover:text-gray-900 italic font-bold shadow-md text-zinc-900 text-sm md:text-base">Estoque</button>
-              <button onclick="Sistema.selecionarSetor('DML_OFICINA', 'DML Oficina')" class="card-operacional p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] text-left group cursor-pointer border-none text-zinc-400 hover:text-gray-900 italic font-bold shadow-md text-zinc-900 text-sm md:text-base">Oficina</button>
-              <button onclick="Sistema.selecionarSetor('DML_INDUSTRIA', 'DML Industria')" class="card-operacional p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] text-left group cursor-pointer border-none text-zinc-400 hover:text-gray-900 italic font-bold shadow-md text-zinc-900 text-sm md:text-base">Industria</button>
-              <button onclick="Sistema.selecionarSetor('DML_VESTIARIO', 'DML Vestiario')" class="card-operacional p-4 md:p-10 rounded-[2rem] md:rounded-[3rem] text-left group cursor-pointer border-none text-zinc-400 hover:text-gray-900 italic font-bold shadow-md text-zinc-900 text-sm md:text-base">Vestiario</button>
+              <button onclick="Sistema.selecionarSetor('DML_COMERCIAL', 'DML Comercial')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <i data-lucide="store" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+                <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">Comercial</h3>
+              </button>
+              <button onclick="Sistema.selecionarSetor('DML_CCB', 'DML CCB')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <i data-lucide="building" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+                <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">CCB</h3>
+              </button>
+              <button onclick="Sistema.selecionarSetor('DML_ESTOQUE', 'DML Estoque')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <i data-lucide="package" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+                <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">Estoque</h3>
+              </button>
+              <button onclick="Sistema.selecionarSetor('DML_OFICINA', 'DML Oficina')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <i data-lucide="wrench" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+                <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">Oficina</h3>
+              </button>
+              <button onclick="Sistema.selecionarSetor('DML_INDUSTRIA', 'DML Industria')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <i data-lucide="factory" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+                <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">Industria</h3>
+              </button>
+              <button onclick="Sistema.selecionarSetor('DML_VESTIARIO', 'DML Vestiario')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+                <i data-lucide="shirt" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+                <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">Vestiario</h3>
+              </button>
             </div>
           </div>
         </div>

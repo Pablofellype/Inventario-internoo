@@ -674,42 +674,55 @@ export const UI = {
   // =========================================================
   abrirPopupRastreio() {
     Swal.fire({
-      title: "RASTREAMENTO",
       html: `
-                <div class="text-left mt-2">
-                    <p class="text-xs font-medium text-gray-500 mb-6 text-center">Digite o <b>ID do Pedido</b> ou sua <b>Matrícula</b>.</p>
-                    <div class="relative group">
-                        <input id="inputRastreio" type="text" placeholder="DIGITE AQUI..." class="w-full bg-gray-50 border-2 border-gray-200 rounded-2xl p-4 pl-12 text-lg font-black text-gray-900 outline-none focus:border-red-500 focus:bg-white transition-all uppercase text-center placeholder-gray-300">
-                        <div class="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors">
-                            <i data-lucide="search" class="w-6 h-6"></i>
-                        </div>
-                    </div>
+        <div style="font-family: 'Space Grotesk', sans-serif;" class="text-left">
+            <div class="flex items-center gap-2.5 mb-6">
+                <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Rastreamento</span>
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-black uppercase tracking-tight text-zinc-900 leading-[0.95] mb-2">Acompanhe<br>seu pedido</h2>
+            <p class="text-[13px] text-zinc-400 mb-7 leading-relaxed">Digite o <span class="font-bold text-zinc-600">ID do pedido</span> ou sua <span class="font-bold text-zinc-600">matrícula</span> para consultar.</p>
+            <div class="relative group">
+                <input id="inputRastreio" type="text" placeholder="ID ou Matrícula" class="w-full bg-zinc-50 border-2 border-zinc-200 rounded-xl p-4 pl-12 text-base font-bold text-zinc-900 outline-none focus:border-zinc-900 focus:bg-white transition-all duration-200 uppercase placeholder-zinc-300" style="font-family: 'Space Grotesk', sans-serif;">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-zinc-900 transition-colors duration-200">
+                    <i data-lucide="search" class="w-5 h-5"></i>
                 </div>
-            `,
-      showCancelButton: true,
-      confirmButtonText: "BUSCAR AGORA",
-      cancelButtonText: "CANCELAR",
-      confirmButtonColor: "#F40009",
+            </div>
+            <div class="flex gap-2.5 mt-5">
+                <button onclick="
+                    const val = document.getElementById('inputRastreio').value;
+                    if(!val){document.getElementById('inputRastreio').style.borderColor='#F40009';setTimeout(()=>document.getElementById('inputRastreio').style.borderColor='',800);return;}
+                    Swal.close();
+                    window.Sistema.processarRastreio(val);
+                " class="flex-1 bg-zinc-900 text-white py-3.5 rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-[#F40009] active:scale-[0.97] transition-all duration-200 flex items-center justify-center gap-2 border-none cursor-pointer">
+                    Buscar
+                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                </button>
+                <button onclick="Swal.close()" class="px-6 py-3.5 rounded-xl font-black uppercase text-[11px] tracking-widest text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-all duration-200 border-none cursor-pointer bg-transparent">
+                    Cancelar
+                </button>
+            </div>
+        </div>
+      `,
+      showConfirmButton: false,
+      showCancelButton: false,
       background: "#fff",
-      color: "#000",
+      padding: "1.5rem",
       customClass: { popup: "swal2-popup-custom" },
-      width: window.innerWidth < 640 ? "90%" : "32em",
+      width: window.innerWidth < 640 ? "92%" : "420px",
       didOpen: () => {
         window.lucide.createIcons();
-        document.getElementById("inputRastreio").focus();
+        const input = document.getElementById("inputRastreio");
+        input.focus();
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            const val = input.value;
+            if (!val) { input.style.borderColor = '#F40009'; setTimeout(() => input.style.borderColor = '', 800); return; }
+            Swal.close();
+            window.Sistema.processarRastreio(val);
+          }
+        });
       },
-      preConfirm: () => {
-        const val = document.getElementById("inputRastreio").value;
-        if (!val) {
-          Swal.showValidationMessage("Digite algo para buscar!");
-          return false;
-        }
-        return val;
-      },
-    }).then((result) => {
-      if (result.isConfirmed) {
-        window.Sistema.processarRastreio(result.value);
-      }
     });
   },
 

@@ -12,7 +12,8 @@ export const PublicForm = {
         itens: [] 
     },
     
-    carrinhoTemp: {}, 
+    carrinhoTemp: {},
+    produtosAtual: [],
     passoAtual: 1,
 
     abrir() {
@@ -33,6 +34,7 @@ export const PublicForm = {
     resetarFormulario() {
         this.dadosPedido = { colaborador: "", matricula: "", equipe: "", tipo: "", setorDML: "", itens: [] };
         this.carrinhoTemp = {};
+        this.produtosAtual = [];
         this.passoAtual = 1;
     },
 
@@ -43,64 +45,93 @@ export const PublicForm = {
         this.atualizarProgresso(1);
         const area = document.getElementById("areaEtapas");
         area.innerHTML = `
-        <div class="animate-entrada-suave">
-            <!-- Header visual -->
-            <div class="text-center mb-8">
-                <div class="relative inline-block">
-                    <div id="avatarColaborador" class="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-br from-red-50 to-red-100 text-[#F40009] rounded-full flex items-center justify-center mx-auto shadow-[0_8px_30px_rgba(244,0,9,0.12)] overflow-hidden border-4 border-white transition-all duration-500">
+        <div>
+            <!-- Avatar centralizado -->
+            <div class="flex justify-center mb-6 opacity-0 animate-scale-in">
+                <div class="relative">
+                    <div id="avatarColaborador" class="w-20 h-20 sm:w-24 sm:h-24 bg-zinc-50 border-2 border-zinc-100 text-zinc-300 rounded-full flex items-center justify-center overflow-hidden transition-all duration-700 animate-float">
                         <i data-lucide="user" class="w-9 h-9 sm:w-10 sm:h-10"></i>
                     </div>
-                    <div id="badgeVerificado" class="absolute -bottom-1 -right-1 w-7 h-7 bg-zinc-200 rounded-full flex items-center justify-center border-2 border-white transition-all duration-300">
-                        <i data-lucide="scan-face" class="w-3.5 h-3.5 text-zinc-400"></i>
+                    <div id="badgeVerificado" class="absolute -bottom-0.5 -right-0.5 w-6 h-6 bg-zinc-200 rounded-full flex items-center justify-center border-2 border-white transition-all duration-500">
+                        <i data-lucide="scan-face" class="w-3 h-3 text-zinc-400"></i>
                     </div>
                 </div>
-                <h3 class="text-xl sm:text-2xl md:text-3xl font-black text-zinc-900 mt-5 mb-1 leading-tight">Identifique-se</h3>
-                <p class="text-xs sm:text-sm text-zinc-400 max-w-[260px] mx-auto">Comece digitando seu nome para localizar seu cadastro.</p>
+            </div>
+
+            <!-- Header left-aligned -->
+            <div class="mb-6 opacity-0 animate-fade-up" style="animation-delay: 0.06s">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Etapa 01</span>
+                </div>
+                <h3 class="text-3xl sm:text-4xl font-black text-zinc-900 leading-[0.95] uppercase tracking-tight">Identifique-se</h3>
+                <p class="text-xs sm:text-sm text-zinc-400 mt-2 leading-relaxed">Digite seu nome para localizar seu cadastro.</p>
             </div>
 
             <!-- Campo de busca -->
-            <div class="relative text-left mb-4">
-                <label class="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 mb-2 block pl-1">Nome do Colaborador</label>
+            <div class="relative mb-4 opacity-0 animate-fade-up z-[100]" style="animation-delay: 0.14s">
+                <label class="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-900 mb-2 block">Nome do Colaborador</label>
                 <div class="relative">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300 pointer-events-none"><i data-lucide="search" class="w-4 h-4"></i></div>
                     <input type="text" id="inputBuscaNome" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" inputmode="text" readonly onfocus="this.removeAttribute('readonly')"
-                        class="w-full bg-zinc-50 border-2 border-zinc-100 pl-11 pr-4 py-4 rounded-2xl font-bold text-zinc-900 outline-none focus:bg-white focus:border-[#F40009] focus:ring-4 focus:ring-red-50 transition-all uppercase text-sm placeholder:text-zinc-300 placeholder:normal-case"
+                        class="w-full bg-white border-2 border-zinc-200 pl-11 pr-4 py-4 rounded-xl font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:ring-4 focus:ring-red-50 transition-all duration-300 uppercase text-sm placeholder:text-zinc-300 placeholder:normal-case"
                         placeholder="Ex: Maria, João...">
                 </div>
-                <div id="listaSugestoes" class="hidden absolute top-full left-0 right-0 bg-white border border-zinc-100 shadow-[0_15px_40px_rgba(0,0,0,0.12)] rounded-2xl mt-2 max-h-52 overflow-y-auto z-50 divide-y divide-zinc-50"></div>
+                <div id="listaSugestoes" class="hidden absolute top-full left-0 right-0 bg-white border border-zinc-200 shadow-[0_15px_40px_rgba(0,0,0,0.1)] rounded-xl mt-2 max-h-52 overflow-y-auto z-[100] divide-y divide-zinc-50"></div>
             </div>
 
             <!-- Matrícula (aparece após seleção) -->
-            <div class="text-left opacity-40 transition-all duration-500 scale-[0.98]" id="boxMatricula">
-                <label class="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-400 mb-2 block pl-1">Matrícula Vinculada</label>
+            <div class="opacity-0 transition-all duration-700 scale-[0.96] pointer-events-none" id="boxMatricula">
+                <label class="text-[10px] font-black uppercase tracking-[0.15em] text-zinc-900 mb-2 block">Matrícula Vinculada</label>
                 <div class="relative">
                     <div class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300 pointer-events-none"><i data-lucide="hash" class="w-4 h-4"></i></div>
-                    <input type="text" id="inputMatriculaAuto" disabled class="w-full bg-zinc-50 border-2 border-transparent pl-11 pr-4 py-4 rounded-2xl font-bold text-zinc-400 text-sm" placeholder="Preenchimento automático">
+                    <input type="text" id="inputMatriculaAuto" disabled class="w-full bg-zinc-50 border-2 border-zinc-200 pl-11 pr-4 py-4 rounded-xl font-bold text-zinc-400 text-sm" placeholder="Preenchimento automático">
                 </div>
             </div>
 
             <!-- Botão continuar -->
             <button id="btnAvancar1" disabled onclick="PublicForm.renderizarEtapa2()"
-                class="mt-8 w-full bg-zinc-100 text-zinc-300 py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-sm transition-all duration-300 cursor-not-allowed flex items-center justify-center gap-2">
+                class="mt-8 w-full bg-zinc-100 text-zinc-300 py-4 rounded-xl font-black uppercase tracking-[0.15em] text-sm transition-all duration-500 cursor-not-allowed flex items-center justify-center gap-2 opacity-0 animate-fade-up" style="animation-delay: 0.22s">
                 Continuar <i data-lucide="arrow-right" class="w-4 h-4"></i>
             </button>
-            <button onclick="PublicForm.fechar()" class="mt-4 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2">Cancelar</button>
+            <button onclick="PublicForm.fechar()" class="mt-3 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2 opacity-0 animate-fade-up" style="animation-delay: 0.28s">Cancelar</button>
         </div>`;
         
         const input = document.getElementById("inputBuscaNome");
         const lista = document.getElementById("listaSugestoes");
         input.addEventListener("input", (e) => {
             const termo = e.target.value.toUpperCase();
+            // Resetar estado ao digitar
+            const boxMat = document.getElementById("boxMatricula");
+            const btn = document.getElementById("btnAvancar1");
+            const avatarEl = document.getElementById("avatarColaborador");
+            const badge = document.getElementById("badgeVerificado");
+            boxMat.classList.add("opacity-0", "scale-[0.96]", "pointer-events-none");
+            boxMat.classList.remove("opacity-100", "scale-100");
+            document.getElementById("inputMatriculaAuto").value = "";
+            btn.disabled = true;
+            btn.className = "mt-8 w-full bg-zinc-100 text-zinc-300 py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-sm transition-all duration-500 cursor-not-allowed flex items-center justify-center gap-2";
+            avatarEl.innerHTML = '<i data-lucide="user" class="w-10 h-10 sm:w-11 sm:h-11"></i>';
+            avatarEl.classList.remove("shadow-[0_12px_40px_rgba(244,0,9,0.2)]", "ring-4", "ring-emerald-100");
+            avatarEl.classList.add("animate-float");
+            avatarEl.style.transform = ""; avatarEl.style.opacity = "";
+            badge.classList.remove("bg-emerald-500", "animate-scale-in");
+            badge.classList.add("bg-zinc-200");
+            badge.innerHTML = '<i data-lucide="scan-face" class="w-3.5 h-3.5 text-zinc-400"></i>';
+            if(window.lucide) window.lucide.createIcons();
+            this.dadosPedido.colaborador = "";
+            this.dadosPedido.matricula = "";
+
             if (termo.length === 0) { lista.classList.add("hidden"); return; }
             const fonteDados = State.colaboradores || [];
             const filtrados = fonteDados.filter(c => c.nome && c.nome.toUpperCase().startsWith(termo));
             if (filtrados.length > 0) {
-                lista.innerHTML = filtrados.map(c => {
+                lista.innerHTML = filtrados.map((c, idx) => {
                     const avatarSrc = c.imagem ? `<img src="${c.imagem}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-4 h-4\\'></i>';if(window.lucide)window.lucide.createIcons();">` : '<i data-lucide="user" class="w-4 h-4"></i>';
-                    return `<div class="px-4 py-3 hover:bg-red-50/60 cursor-pointer flex items-center gap-3 group transition-colors active:bg-red-100" onclick="PublicForm.selecionarColaborador('${c.nome}', '${c.matricula}')">
-                        <div class="w-8 h-8 rounded-full bg-zinc-100 group-hover:bg-red-100 flex items-center justify-center text-zinc-400 group-hover:text-[#F40009] overflow-hidden flex-shrink-0 transition-colors">${avatarSrc}</div>
-                        <div class="flex-1 min-w-0"><p class="font-bold text-zinc-700 group-hover:text-[#F40009] text-sm truncate transition-colors">${c.nome}</p></div>
-                        <span class="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-100 group-hover:bg-red-100 group-hover:text-[#F40009] px-2 py-1 rounded-lg flex-shrink-0 transition-colors">${c.matricula}</span>
+                    return `<div class="px-4 py-3.5 hover:bg-red-50/60 cursor-pointer flex items-center gap-3 group transition-all duration-200 active:bg-red-100 active:scale-[0.98]" data-nome="${encodeURIComponent(c.nome)}" data-mat="${encodeURIComponent(c.matricula)}" onclick="PublicForm.selecionarColaborador(decodeURIComponent(this.dataset.nome), decodeURIComponent(this.dataset.mat))">
+                        <div class="w-9 h-9 rounded-full bg-zinc-100 group-hover:bg-red-100 flex items-center justify-center text-zinc-400 group-hover:text-[#F40009] overflow-hidden flex-shrink-0 transition-all duration-200">${avatarSrc}</div>
+                        <div class="flex-1 min-w-0"><p class="font-bold text-zinc-900 group-hover:text-[#F40009] text-sm truncate transition-colors">${c.nome}</p></div>
+                        <span class="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-100 group-hover:bg-red-100 group-hover:text-[#F40009] px-2.5 py-1 rounded-lg flex-shrink-0 transition-colors">${c.matricula}</span>
                     </div>`;
                 }).join("");
                 lista.classList.remove("hidden");
@@ -118,7 +149,7 @@ export const PublicForm = {
         const badge = document.getElementById("badgeVerificado");
 
         inputMat.value = matricula;
-        boxMat.classList.remove("opacity-40", "scale-[0.98]");
+        boxMat.classList.remove("opacity-0", "scale-[0.96]", "pointer-events-none");
         boxMat.classList.add("opacity-100", "scale-100");
         inputMat.classList.replace("bg-zinc-50", "bg-white");
         inputMat.classList.replace("text-zinc-400", "text-zinc-900");
@@ -131,19 +162,26 @@ export const PublicForm = {
         const colab = (State.colaboradores || []).find(c => c.matricula === matricula);
         const avatarEl = document.getElementById("avatarColaborador");
         if (colab && colab.imagem && avatarEl) {
-            avatarEl.innerHTML = `<img src="${colab.imagem}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-9 h-9 sm:w-10 sm:h-10\\'></i>';if(window.lucide)window.lucide.createIcons();">`;
-            avatarEl.classList.add("shadow-[0_8px_30px_rgba(244,0,9,0.2)]");
+            avatarEl.style.transform = "scale(0.9)";
+            avatarEl.style.opacity = "0.5";
+            setTimeout(() => {
+                avatarEl.innerHTML = `<img src="${colab.imagem}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<i data-lucide=\\'user\\' class=\\'w-10 h-10 sm:w-11 sm:h-11\\'></i>';if(window.lucide)window.lucide.createIcons();">`;
+                avatarEl.style.transform = "scale(1)";
+                avatarEl.style.opacity = "1";
+                avatarEl.classList.add("shadow-[0_12px_40px_rgba(244,0,9,0.2)]", "ring-4", "ring-emerald-100");
+                avatarEl.classList.remove("animate-float");
+            }, 150);
         }
 
         // Badge de verificado verde
         if (badge) {
             badge.classList.remove("bg-zinc-200");
-            badge.classList.add("bg-emerald-500");
+            badge.classList.add("bg-emerald-500", "animate-scale-in");
             badge.innerHTML = '<i data-lucide="check" class="w-3.5 h-3.5 text-white"></i>';
         }
 
         btn.disabled = false;
-        btn.className = "mt-8 w-full bg-[#F40009] text-white py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-sm transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 shadow-[0_8px_25px_rgba(244,0,9,0.3)] hover:shadow-[0_12px_35px_rgba(244,0,9,0.4)] hover:scale-[1.02] active:scale-[0.98]";
+        btn.className = "mt-8 w-full bg-[#F40009] text-white py-4 rounded-xl font-black uppercase tracking-[0.15em] text-sm transition-all duration-300 cursor-pointer flex items-center justify-center gap-2 shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px]";
         if(window.lucide) window.lucide.createIcons();
     },
 
@@ -153,46 +191,50 @@ export const PublicForm = {
     renderizarEtapa2() {
         this.atualizarProgresso(2);
         document.getElementById("areaEtapas").innerHTML = `
-        <div class="animate-entrada-suave">
-            <div class="text-center mb-6 sm:mb-8">
-                <div class="w-14 h-14 bg-gradient-to-br from-red-50 to-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-[#F40009] shadow-[0_4px_15px_rgba(244,0,9,0.1)]">
-                    <i data-lucide="users" class="w-7 h-7"></i>
+        <div>
+            <!-- Header -->
+            <div class="mb-7 opacity-0 animate-fade-up">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Etapa 02</span>
                 </div>
-                <h3 class="text-xl sm:text-2xl font-black text-zinc-900 mb-1">Qual sua equipe?</h3>
-                <p class="text-xs text-zinc-400">Selecione seu setor de trabalho</p>
+                <h3 class="text-3xl sm:text-4xl font-black text-zinc-900 leading-[0.95] uppercase tracking-tight">Qual sua<br>equipe?</h3>
+                <p class="text-xs text-zinc-400 mt-2">Selecione seu setor de trabalho</p>
             </div>
 
             <!-- Seção Limpeza -->
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-900 mb-2 pl-1">Limpeza</p>
-            <div class="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
-                <button onclick="PublicForm.selecionarEquipe('DIURNO')" class="group p-4 sm:p-5 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer text-center active:scale-95">
-                    <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 mx-auto mb-3 group-hover:bg-amber-100 transition-colors"><i data-lucide="sun" class="w-5 h-5"></i></div>
-                    <p class="font-black text-zinc-700 uppercase text-xs sm:text-sm leading-tight group-hover:text-[#F40009] transition-colors">Diurno</p>
-                    <p class="text-[10px] text-zinc-400 mt-0.5">Manhã / Tarde</p>
+            <div class="mb-3 opacity-0 animate-fade-up" style="animation-delay: 0.1s">
+                <p class="text-sm font-black text-zinc-900 uppercase tracking-wide">Limpeza</p>
+                <div class="w-8 h-[2px] bg-[#F40009] rounded-full mt-1.5"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5 mb-7">
+                <button onclick="PublicForm.selecionarEquipe('DIURNO')" class="group p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer text-left active:scale-[0.97] opacity-0 animate-fade-up flex items-center gap-3" style="animation-delay: 0.15s">
+                    <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="sun" class="w-4.5 h-4.5"></i></div>
+                    <div><p class="font-black text-zinc-900 uppercase text-xs leading-tight group-hover:text-[#F40009] transition-colors">Diurno</p><p class="text-[9px] text-zinc-400 mt-0.5">Manhã / Tarde</p></div>
                 </button>
-                <button onclick="PublicForm.selecionarEquipe('NOTURNO')" class="group p-4 sm:p-5 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer text-center active:scale-95">
-                    <div class="w-11 h-11 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-400 mx-auto mb-3 group-hover:bg-indigo-100 transition-colors"><i data-lucide="moon" class="w-5 h-5"></i></div>
-                    <p class="font-black text-zinc-700 uppercase text-xs sm:text-sm leading-tight group-hover:text-[#F40009] transition-colors">Noturno</p>
-                    <p class="text-[10px] text-zinc-400 mt-0.5">Noite</p>
+                <button onclick="PublicForm.selecionarEquipe('NOTURNO')" class="group p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer text-left active:scale-[0.97] opacity-0 animate-fade-up flex items-center gap-3" style="animation-delay: 0.2s">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="moon" class="w-4.5 h-4.5"></i></div>
+                    <div><p class="font-black text-zinc-900 uppercase text-xs leading-tight group-hover:text-[#F40009] transition-colors">Noturno</p><p class="text-[9px] text-zinc-400 mt-0.5">Noite</p></div>
                 </button>
             </div>
 
             <!-- Seção Segurança -->
-            <p class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-900 mb-2 pl-1">Segurança Patrimonial</p>
-            <div class="grid grid-cols-2 gap-2 sm:gap-3">
-                <button onclick="PublicForm.selecionarEquipe('SEGURANCA_DIURNO')" class="group p-4 sm:p-5 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer text-center active:scale-95">
-                    <div class="w-11 h-11 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500 mx-auto mb-3 group-hover:bg-amber-100 transition-colors"><i data-lucide="shield" class="w-5 h-5"></i></div>
-                    <p class="font-black text-zinc-700 uppercase text-xs sm:text-sm leading-tight group-hover:text-[#F40009] transition-colors">Diurno</p>
-                    <p class="text-[10px] text-zinc-400 mt-0.5">Manhã / Tarde</p>
+            <div class="mb-3 opacity-0 animate-fade-up" style="animation-delay: 0.25s">
+                <p class="text-sm font-black text-zinc-900 uppercase tracking-wide">Segurança Patrimonial</p>
+                <div class="w-8 h-[2px] bg-[#F40009] rounded-full mt-1.5"></div>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+                <button onclick="PublicForm.selecionarEquipe('SEGURANCA_DIURNO')" class="group p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer text-left active:scale-[0.97] opacity-0 animate-fade-up flex items-center gap-3" style="animation-delay: 0.3s">
+                    <div class="w-10 h-10 bg-amber-50 rounded-lg flex items-center justify-center text-amber-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="shield" class="w-4.5 h-4.5"></i></div>
+                    <div><p class="font-black text-zinc-900 uppercase text-xs leading-tight group-hover:text-[#F40009] transition-colors">Diurno</p><p class="text-[9px] text-zinc-400 mt-0.5">Manhã / Tarde</p></div>
                 </button>
-                <button onclick="PublicForm.selecionarEquipe('SEGURANCA_NOTURNO')" class="group p-4 sm:p-5 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer text-center active:scale-95">
-                    <div class="w-11 h-11 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-400 mx-auto mb-3 group-hover:bg-indigo-100 transition-colors"><i data-lucide="shield-check" class="w-5 h-5"></i></div>
-                    <p class="font-black text-zinc-700 uppercase text-xs sm:text-sm leading-tight group-hover:text-[#F40009] transition-colors">Noturno</p>
-                    <p class="text-[10px] text-zinc-400 mt-0.5">Noite</p>
+                <button onclick="PublicForm.selecionarEquipe('SEGURANCA_NOTURNO')" class="group p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer text-left active:scale-[0.97] opacity-0 animate-fade-up flex items-center gap-3" style="animation-delay: 0.35s">
+                    <div class="w-10 h-10 bg-indigo-50 rounded-lg flex items-center justify-center text-indigo-400 flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="shield-check" class="w-4.5 h-4.5"></i></div>
+                    <div><p class="font-black text-zinc-900 uppercase text-xs leading-tight group-hover:text-[#F40009] transition-colors">Noturno</p><p class="text-[9px] text-zinc-400 mt-0.5">Noite</p></div>
                 </button>
             </div>
 
-            <button onclick="PublicForm.fechar()" class="mt-6 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2">Cancelar</button>
+            <button onclick="PublicForm.fechar()" class="mt-7 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2 opacity-0 animate-fade-up" style="animation-delay: 0.4s">Cancelar</button>
         </div>`;
         if(window.lucide) window.lucide.createIcons();
     },
@@ -209,35 +251,32 @@ export const PublicForm = {
         this.atualizarProgresso(3);
         const isSeguranca = this.dadosPedido.equipe.startsWith('SEGURANCA');
         const botaoMaterial = isSeguranca ? '' : `
-                <button onclick="PublicForm.selecionarTipo('MATERIAL')" class="group p-5 sm:p-6 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer flex flex-col items-center justify-center gap-3 active:scale-95">
-                    <div class="w-14 h-14 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500 group-hover:bg-emerald-100 transition-colors">
-                        <svg viewBox="0 0 24 24" class="w-7 h-7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                            <path d="M3 10a4 4 0 0 0 0 8h9a4 4 0 0 0 0-8H3z"></path>
-                            <path d="M12 10V6a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0"></path>
-                            <circle cx="6" cy="14" r="1.5"></circle>
-                        </svg>
+                <button onclick="PublicForm.selecionarTipo('MATERIAL')" class="group w-full p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50/30 transition-all duration-200 cursor-pointer flex items-center gap-4 active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: 0.22s">
+                    <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                        <svg viewBox="0 0 24 24" class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a4 4 0 0 0 0 8h9a4 4 0 0 0 0-8H3z"></path><path d="M12 10V6a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0"></path><circle cx="6" cy="14" r="1.5"></circle></svg>
                     </div>
-                    <p class="font-black text-zinc-700 group-hover:text-[#F40009] uppercase text-xs sm:text-sm leading-tight transition-colors">Material de<br>Limpeza</p>
-                    <p class="text-[10px] text-zinc-400">Produtos e insumos</p>
+                    <div class="flex-1"><p class="font-black text-zinc-900 group-hover:text-emerald-600 uppercase text-sm leading-tight transition-colors">Material de Limpeza</p><p class="text-[10px] text-zinc-400 mt-0.5">Produtos e insumos</p></div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-emerald-500 transition-colors"></i>
                 </button>`;
         document.getElementById("areaEtapas").innerHTML = `
-        <div class="animate-entrada-suave">
-            <div class="text-center mb-6 sm:mb-8">
-                <div class="w-14 h-14 bg-gradient-to-br from-red-50 to-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-[#F40009] shadow-[0_4px_15px_rgba(244,0,9,0.1)]">
-                    <i data-lucide="package" class="w-7 h-7"></i>
+        <div>
+            <div class="mb-7 opacity-0 animate-fade-up">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Etapa 03</span>
                 </div>
-                <h3 class="text-xl sm:text-2xl font-black text-zinc-900 mb-1">O que deseja solicitar?</h3>
-                <p class="text-xs text-zinc-400">Escolha a categoria do pedido</p>
+                <h3 class="text-3xl sm:text-4xl font-black text-zinc-900 leading-[0.95] uppercase tracking-tight">O que deseja<br>solicitar?</h3>
+                <p class="text-xs text-zinc-400 mt-2">Escolha a categoria do pedido</p>
             </div>
-            <div class="${isSeguranca ? 'flex justify-center' : 'grid grid-cols-2'} gap-3">
-                <button onclick="PublicForm.selecionarTipo('SOLICITACAO_EPI_UNIFORME')" class="group p-5 sm:p-6 bg-zinc-50 border-2 border-transparent rounded-2xl hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer flex flex-col items-center justify-center gap-3 active:scale-95 ${isSeguranca ? 'w-full max-w-[200px]' : ''}">
-                    <div class="w-14 h-14 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500 group-hover:bg-blue-100 transition-colors"><i data-lucide="shirt" class="w-7 h-7"></i></div>
-                    <p class="font-black text-zinc-700 group-hover:text-[#F40009] uppercase text-xs sm:text-sm leading-tight transition-colors">EPI &<br>Uniforme</p>
-                    <p class="text-[10px] text-zinc-400">Equipamentos e roupas</p>
+            <div class="flex flex-col gap-2.5">
+                <button onclick="PublicForm.selecionarTipo('SOLICITACAO_EPI_UNIFORME')" class="group w-full p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 cursor-pointer flex items-center gap-4 active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: 0.12s">
+                    <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="shirt" class="w-5.5 h-5.5"></i></div>
+                    <div class="flex-1"><p class="font-black text-zinc-900 group-hover:text-blue-600 uppercase text-sm leading-tight transition-colors">EPI & Uniforme</p><p class="text-[10px] text-zinc-400 mt-0.5">Equipamentos e roupas</p></div>
+                    <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-blue-500 transition-colors"></i>
                 </button>
                 ${botaoMaterial}
             </div>
-            <button onclick="PublicForm.fechar()" class="mt-6 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2">Cancelar</button>
+            <button onclick="PublicForm.fechar()" class="mt-7 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2 opacity-0 animate-fade-up" style="animation-delay: 0.32s">Cancelar</button>
         </div>`;
         if(window.lucide) window.lucide.createIcons();
     },
@@ -264,24 +303,25 @@ export const PublicForm = {
             { id: "DML_INDUSTRIA", nome: "DML Indústria", icon: "factory", cor: "bg-emerald-50 text-emerald-500" },
             { id: "DML_OFICINA", nome: "DML Oficina", icon: "wrench", cor: "bg-orange-50 text-orange-500" }
         ];
-        const botoes = locais.map(l => `
-            <button onclick="PublicForm.finalizarDML('${l.id}')" class="group w-full p-3.5 sm:p-4 bg-zinc-50 border-2 border-transparent rounded-2xl flex items-center gap-3 sm:gap-4 hover:border-[#F40009] hover:bg-red-50 transition-all cursor-pointer active:scale-[0.98]">
-                <div class="w-10 h-10 sm:w-11 sm:h-11 ${l.cor} rounded-xl flex items-center justify-center flex-shrink-0 transition-colors"><i data-lucide="${l.icon}" class="w-5 h-5"></i></div>
-                <span class="font-black text-zinc-700 group-hover:text-[#F40009] uppercase text-xs sm:text-sm transition-colors">${l.nome}</span>
-                <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-[#F40009] ml-auto transition-colors"></i>
+        const botoes = locais.map((l, i) => `
+            <button onclick="PublicForm.finalizarDML('${l.id}')" class="group w-full p-4 bg-white border-2 border-zinc-200 rounded-xl flex items-center gap-3.5 hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: ${0.12 + i * 0.06}s">
+                <div class="w-10 h-10 ${l.cor} rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="${l.icon}" class="w-4.5 h-4.5"></i></div>
+                <span class="font-black text-zinc-900 group-hover:text-[#F40009] uppercase text-xs sm:text-sm transition-colors flex-1">${l.nome}</span>
+                <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-[#F40009] transition-colors"></i>
             </button>`).join("");
 
         document.getElementById("areaEtapas").innerHTML = `
-        <div class="animate-entrada-suave">
-            <div class="text-center mb-6 sm:mb-8">
-                <div class="w-14 h-14 bg-gradient-to-br from-red-50 to-red-100 rounded-full flex items-center justify-center mx-auto mb-4 text-[#F40009] shadow-[0_4px_15px_rgba(244,0,9,0.1)]">
-                    <i data-lucide="map-pin" class="w-7 h-7"></i>
+        <div>
+            <div class="mb-7 opacity-0 animate-fade-up">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Etapa 04</span>
                 </div>
-                <h3 class="text-xl sm:text-2xl font-black text-zinc-900 mb-1">Qual Local?</h3>
-                <p class="text-xs text-zinc-400">Selecione para onde é o material</p>
+                <h3 class="text-3xl sm:text-4xl font-black text-zinc-900 leading-[0.95] uppercase tracking-tight">Qual local?</h3>
+                <p class="text-xs text-zinc-400 mt-2">Selecione para onde é o material</p>
             </div>
-            <div class="space-y-2 sm:space-y-3">${botoes}</div>
-            <button onclick="PublicForm.fechar()" class="mt-6 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2">Cancelar</button>
+            <div class="flex flex-col gap-2.5">${botoes}</div>
+            <button onclick="PublicForm.fechar()" class="mt-7 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2 opacity-0 animate-fade-up" style="animation-delay: 0.5s">Cancelar</button>
         </div>`;
         if(window.lucide) window.lucide.createIcons();
     },
@@ -295,6 +335,7 @@ export const PublicForm = {
     // ETAPA 5: SELEÇÃO (COM TRAVA DE TAMANHO)
     // =================================================================
     async renderizarSelecaoProdutos(categoriaID) {
+        this.atualizarProgresso(5);
         const area = document.getElementById("areaEtapas");
         area.innerHTML = `<div class="text-center py-16 sm:py-20"><div class="w-12 h-12 border-[3px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin mx-auto"></div><p class="mt-5 text-[11px] font-black uppercase text-zinc-400 tracking-widest">Carregando Itens...</p></div>`;
 
@@ -311,14 +352,20 @@ export const PublicForm = {
             return;
         }
 
+        this.produtosAtual = produtos;
+
         let htmlLista = `
-        <div class="animate-entrada-suave pb-24">
-            <div class="mb-5 sm:mb-6">
-                <h3 class="text-base sm:text-lg font-black text-zinc-900 uppercase leading-none truncate">${categoriaID.replace('_', ' ').replace('SOLICITACAO', '')}</h3>
-                <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-0.5">Selecione os itens e quantidades</p>
+        <div class="pb-24">
+            <div class="mb-6 opacity-0 animate-fade-up">
+                <div class="flex items-center gap-2.5 mb-3">
+                    <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                    <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Seleção</span>
+                </div>
+                <h3 class="text-2xl sm:text-3xl font-black text-zinc-900 uppercase leading-[0.95] tracking-tight truncate">${categoriaID.replace('_', ' ').replace('SOLICITACAO', '')}</h3>
+                <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mt-1.5">Selecione os itens e quantidades</p>
             </div>
 
-            <div class="grid grid-cols-2 gap-2 sm:gap-3">`;
+            <div class="grid grid-cols-2 gap-2.5 sm:gap-3">`;
 
         produtos.forEach((prod, index) => {
             const safeRoot = `prod-${index}`;
@@ -332,67 +379,63 @@ export const PublicForm = {
             let quantidadeInicial = 0;
             const varComQtd = prod.vars.find(v => (this.carrinhoTemp[v.code]?.qtd || 0) > 0);
 
+            const delay = Math.min(index * 0.06, 0.6);
+
             if (temVariacao) {
-                if (varComQtd) {
-                    codigoInicial = varComQtd.code;
-                    labelInicial = varComQtd.label;
-                    quantidadeInicial = this.carrinhoTemp[varComQtd.code]?.qtd || 0;
-                }
-                // --- DROPDOWN (Começa Neutro) ---
-                seletorHTML = `
-                <div class="relative w-full mb-3 px-1 z-10">
-                    <button id="btn-dd-${safeRoot}" onclick="PublicForm.toggleDropdown('${safeRoot}')" class="w-full bg-gray-50 border border-gray-200 ${varComQtd ? 'text-[#F40009]' : 'text-gray-400'} text-xs font-bold rounded-xl p-3 flex justify-between items-center outline-none focus:border-[#F40009] transition-all uppercase shadow-sm active:scale-95">
-                        <span id="txt-dd-${safeRoot}">${varComQtd ? `TAM: ${labelInicial}` : 'ESCOLHER OPÇÃO'}</span>
-                        <i data-lucide="chevron-down" class="w-3 h-3 text-gray-400"></i>
-                    </button>
-                    
-                    <div id="list-dd-${safeRoot}" class="hidden absolute top-full left-0 right-0 mt-2 bg-white border border-gray-100 rounded-xl shadow-xl z-50 overflow-hidden max-h-48 overflow-y-auto animate-entrada-suave">
-                        ${prod.vars.map(v => `
-                            <div onclick="PublicForm.selecionarTamanho('${safeRoot}', '${v.code}', '${v.label}', '${prod.root}')" class="p-3 text-xs font-bold text-gray-600 hover:bg-red-50 hover:text-[#F40009] cursor-pointer border-b border-gray-50 last:border-0 uppercase transition-colors">
-                                TAM: ${v.label}
-                            </div>
-                        `).join('')}
+                const totalVars = prod.vars.reduce((acc, v) => acc + (this.carrinhoTemp[v.code]?.qtd || 0), 0);
+                const badgeHTML = `<div id="badge-${safeRoot}" class="absolute top-1.5 right-1.5 w-6 h-6 bg-[#F40009] text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg z-10 ${totalVars > 0 ? 'animate-scale-in' : 'hidden'}">${totalVars}</div>`;
+
+                htmlLista += `
+                <div class="bg-white p-2.5 sm:p-3 rounded-xl border-2 border-zinc-100 flex flex-col items-center text-center relative group hover:border-zinc-200 transition-all duration-200 opacity-0 animate-fade-up" style="animation-delay: ${delay}s">
+                    ${badgeHTML}
+                    <div class="relative w-full aspect-square mb-2 cursor-zoom-in overflow-hidden rounded-lg bg-zinc-50" onclick="PublicForm.verFotoGrande(this)" data-foto="${encodeURIComponent(prod.f)}" data-nome="${encodeURIComponent(prod.root)}">
+                        <img src="${prod.f}" onerror="this.src='assets/img/placeholder.png'" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500">
+                        <div class="absolute bottom-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-200"><i data-lucide="maximize-2" class="w-3 h-3"></i></div>
                     </div>
-                    <input type="hidden" id="sel-${safeRoot}" value="${codigoInicial}" data-label="${labelInicial}" data-has-vars="true">
+                    <p class="text-[9px] sm:text-[10px] font-bold text-zinc-700 leading-tight h-7 sm:h-8 overflow-hidden line-clamp-2 uppercase mb-2 w-full px-0.5">${prod.root}</p>
+                    <button onclick="PublicForm.abrirVariacoes(${index})" class="w-full bg-zinc-900 text-white rounded-lg py-2.5 font-black uppercase text-[10px] tracking-wider hover:bg-[#F40009] active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5 mt-auto">
+                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+                    </button>
                 </div>`;
+                return;
             } else if (eUnico) {
                 codigoInicial = prod.vars[0].code;
                 labelInicial = prod.vars[0].label;
                 quantidadeInicial = this.carrinhoTemp[codigoInicial]?.qtd || 0;
-                seletorHTML = `<input type="hidden" id="sel-${safeRoot}" value="${codigoInicial}" data-label="${labelInicial}" data-has-vars="false"><div class="h-2"></div>`; 
+                seletorHTML = `<input type="hidden" id="sel-${safeRoot}" value="${codigoInicial}" data-label="${labelInicial}" data-has-vars="false"><div class="h-2"></div>`;
             } else {
                 codigoInicial = prod.vars[0].code;
                 labelInicial = prod.vars[0].label;
                 quantidadeInicial = this.carrinhoTemp[codigoInicial]?.qtd || 0;
-                seletorHTML = `<input type="hidden" id="sel-${safeRoot}" value="${codigoInicial}" data-label="${labelInicial}" data-has-vars="false"><div class="w-full mb-3 text-xs font-bold text-gray-400 uppercase tracking-widest bg-gray-50 py-1 rounded-lg">TAM: ${labelInicial}</div>`;
+                seletorHTML = `<input type="hidden" id="sel-${safeRoot}" value="${codigoInicial}" data-label="${labelInicial}" data-has-vars="false"><div class="w-full mb-3 text-[10px] font-bold text-zinc-400 uppercase tracking-widest bg-zinc-50 py-1.5 rounded-lg">TAM: ${labelInicial}</div>`;
             }
 
             htmlLista += `
-            <div class="bg-white p-2.5 sm:p-3 rounded-2xl border border-zinc-100 flex flex-col items-center text-center relative group hover:shadow-lg hover:border-zinc-200 transition-all duration-200">
-                <div class="relative w-full aspect-square mb-2 cursor-zoom-in overflow-hidden rounded-xl bg-zinc-50" onclick="PublicForm.verFotoGrande('${prod.f}', '${prod.root}')">
-                    <img src="${prod.f}" onerror="this.src='assets/img/placeholder.png'" class="w-full h-full object-contain mix-blend-multiply hover:scale-110 transition-transform duration-500">
-                    <div class="absolute bottom-1 right-1 bg-black/40 text-white p-1 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity"><i data-lucide="maximize-2" class="w-3 h-3"></i></div>
+            <div class="bg-white p-2.5 sm:p-3 rounded-xl border-2 border-zinc-100 flex flex-col items-center text-center relative group hover:border-zinc-200 transition-all duration-200 opacity-0 animate-fade-up" style="animation-delay: ${delay}s">
+                <div class="relative w-full aspect-square mb-2 cursor-zoom-in overflow-hidden rounded-lg bg-zinc-50" onclick="PublicForm.verFotoGrande(this)" data-foto="${encodeURIComponent(prod.f)}" data-nome="${encodeURIComponent(prod.root)}">
+                    <img src="${prod.f}" onerror="this.src='assets/img/placeholder.png'" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500">
+                    <div class="absolute bottom-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-200"><i data-lucide="maximize-2" class="w-3 h-3"></i></div>
                 </div>
 
                 <p class="text-[9px] sm:text-[10px] font-bold text-zinc-700 leading-tight h-7 sm:h-8 overflow-hidden line-clamp-2 uppercase mb-2 w-full px-0.5">${prod.root}</p>
                 ${seletorHTML}
 
-                <div class="flex items-center gap-1.5 sm:gap-2 bg-zinc-50 rounded-xl p-1 w-full justify-between mt-auto">
-                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root}', -1)" class="w-7 h-7 sm:w-8 sm:h-8 bg-white shadow-sm rounded-lg text-zinc-400 font-bold hover:text-[#F40009] active:scale-90 transition-all text-base sm:text-lg border border-zinc-100">-</button>
-                    <span id="display-${safeRoot}" class="font-black text-sm text-zinc-900 min-w-[20px]">${quantidadeInicial}</span>
-                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root}', 1)" class="w-7 h-7 sm:w-8 sm:h-8 bg-zinc-900 shadow-sm rounded-lg text-white font-bold hover:bg-[#F40009] active:scale-90 transition-all text-base sm:text-lg">+</button>
+                <div class="flex items-center gap-1.5 sm:gap-2 bg-zinc-50 rounded-lg p-1.5 w-full justify-between mt-auto border border-zinc-100">
+                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root.replace(/'/g, "\\'")}', -1)" class="w-7 h-7 sm:w-8 sm:h-8 bg-white rounded-md text-zinc-400 font-bold hover:text-[#F40009] active:scale-90 transition-all duration-200 text-base sm:text-lg border border-zinc-100">-</button>
+                    <span id="display-${safeRoot}" class="font-black text-sm text-zinc-900 min-w-[20px] transition-all duration-200">${quantidadeInicial}</span>
+                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root.replace(/'/g, "\\'")}', 1)" class="w-7 h-7 sm:w-8 sm:h-8 bg-zinc-900 rounded-md text-white font-bold hover:bg-[#F40009] active:scale-90 transition-all duration-200 text-base sm:text-lg">+</button>
                 </div>
             </div>`;
         });
 
         htmlLista += `</div>
-        <div id="barradeConclusao" class="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl p-3 sm:p-4 shadow-[0_-10px_40px_rgba(0,0,0,0.08)] hidden animate-emergir z-40 mt-4 rounded-2xl border border-zinc-100">
+        <div id="barradeConclusao" class="sticky bottom-0 left-0 right-0 bg-white/95 backdrop-blur-2xl p-3.5 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] hidden animate-emergir z-40 mt-4 rounded-xl border border-zinc-200">
             <div class="w-full flex justify-between items-center gap-3">
                 <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 bg-[#F40009]/10 rounded-xl flex items-center justify-center flex-shrink-0"><i data-lucide="shopping-bag" class="w-5 h-5 text-[#F40009]"></i></div>
-                    <div><p class="text-[10px] text-zinc-400 uppercase font-bold leading-none">Itens</p><p id="totalItensResumo" class="text-lg font-black text-zinc-900 leading-tight">0</p></div>
+                    <div class="w-10 h-10 bg-zinc-900 rounded-lg flex items-center justify-center flex-shrink-0"><i data-lucide="shopping-bag" class="w-4.5 h-4.5 text-white"></i></div>
+                    <div><p class="text-[9px] text-zinc-400 uppercase font-bold tracking-wider leading-none">Itens</p><p id="totalItensResumo" class="text-lg font-black text-zinc-900 leading-tight">0</p></div>
                 </div>
-                <button onclick="PublicForm.revisarPedido()" class="bg-[#F40009] text-white px-5 sm:px-8 py-3 rounded-xl font-black uppercase tracking-wider text-xs sm:text-sm shadow-[0_6px_20px_rgba(244,0,9,0.3)] hover:shadow-[0_8px_30px_rgba(244,0,9,0.4)] active:scale-95 transition-all flex items-center gap-2">
+                <button onclick="PublicForm.revisarPedido()" class="bg-[#F40009] text-white px-6 sm:px-8 py-3 rounded-lg font-black uppercase tracking-wider text-xs sm:text-sm shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center gap-2">
                     Revisar <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -423,6 +466,85 @@ export const PublicForm = {
 
         document.getElementById(`list-dd-${safeRoot}`).classList.add('hidden');
         this.atualizarDisplayCounter(safeRoot);
+    },
+
+    abrirVariacoes(prodIndex) {
+        const prod = this.produtosAtual[prodIndex];
+        if (!prod) return;
+        const safeRoot = `prod-${prodIndex}`;
+
+        const varLinhas = prod.vars.map((v, vi) => {
+            const varKey = `modal-var-${prodIndex}-${vi}`;
+            const qtd = this.carrinhoTemp[v.code]?.qtd || 0;
+            return `
+            <div class="flex items-center justify-between py-3.5 ${vi < prod.vars.length - 1 ? 'border-b border-zinc-100/80' : ''} opacity-0 animate-fade-up" style="animation-delay: ${0.1 + vi * 0.05}s">
+                <span class="text-xs font-bold text-zinc-700 uppercase tracking-wide">${v.label}</span>
+                <div class="flex items-center gap-2.5">
+                    <button onclick="PublicForm.clickCounterVar('${v.code}', '${prod.root.replace(/'/g, "\\'")}', '${v.label.replace(/'/g, "\\'")}', -1, '${varKey}', ${prodIndex})" class="w-9 h-9 bg-zinc-50 border border-zinc-200 rounded-xl text-zinc-400 font-bold hover:text-[#F40009] hover:border-red-200 active:scale-90 transition-all duration-200 text-lg flex items-center justify-center">-</button>
+                    <span id="display-${varKey}" class="font-black text-base text-zinc-900 min-w-[28px] text-center transition-all duration-200">${qtd}</span>
+                    <button onclick="PublicForm.clickCounterVar('${v.code}', '${prod.root.replace(/'/g, "\\'")}', '${v.label.replace(/'/g, "\\'")}', 1, '${varKey}', ${prodIndex})" class="w-9 h-9 bg-zinc-900 rounded-xl text-white font-bold hover:bg-[#F40009] active:scale-90 transition-all duration-200 text-lg flex items-center justify-center">+</button>
+                </div>
+            </div>`;
+        }).join('');
+
+        const modal = document.createElement("div");
+        modal.id = "modalVariacoes";
+        modal.className = "fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in";
+        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        modal.innerHTML = `
+        <div class="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.12)] overflow-hidden animate-slide-up sm:animate-scale-in" onclick="event.stopPropagation()">
+            <div class="w-10 h-1 bg-zinc-300 rounded-full mx-auto mt-3 mb-1 sm:hidden"></div>
+            <div class="p-5 flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-lg bg-zinc-50 border-2 border-zinc-100 p-1.5 flex-shrink-0">
+                    <img src="${prod.f}" onerror="this.src='assets/img/placeholder.png'" class="w-full h-full rounded-md object-contain">
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="font-black text-zinc-900 text-sm uppercase truncate">${prod.root}</p>
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-0.5 tracking-wide">Variações e quantidades</p>
+                </div>
+                <button onclick="document.getElementById('modalVariacoes').remove()" class="w-8 h-8 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-400 hover:bg-red-50 hover:text-[#F40009] transition-all duration-200 flex-shrink-0 active:scale-90">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            <div class="px-5 pb-2 max-h-[50vh] overflow-y-auto">
+                ${varLinhas}
+            </div>
+            <div class="p-5 pt-3">
+                <button onclick="document.getElementById('modalVariacoes').remove()" class="w-full bg-[#F40009] text-white py-3.5 rounded-lg font-black uppercase text-xs tracking-wider shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-2">
+                    <i data-lucide="check" class="w-4 h-4"></i> Confirmar
+                </button>
+            </div>
+        </div>`;
+        document.body.appendChild(modal);
+        if (window.lucide) window.lucide.createIcons();
+    },
+
+    clickCounterVar(codigo, rootName, labelVar, delta, varKey, prodIndex) {
+        const labelUpper = labelVar.toUpperCase();
+        let nomeFinal = rootName;
+        if (labelUpper !== "UNICO" && labelUpper !== "ÚNICO" && labelUpper !== "UNIDADE") {
+            nomeFinal = `${rootName} [${labelVar}]`;
+        }
+        this.alterarQtd(codigo, nomeFinal, delta);
+        const display = document.getElementById(`display-${varKey}`);
+        const qtd = this.carrinhoTemp[codigo] ? this.carrinhoTemp[codigo].qtd : 0;
+        display.innerText = qtd;
+        display.classList.add("text-[#F40009]", "scale-125");
+        setTimeout(() => display.classList.remove("text-[#F40009]", "scale-125"), 200);
+
+        // Atualiza badge no card
+        if (prodIndex !== undefined) {
+            const prod = this.produtosAtual[prodIndex];
+            if (prod) {
+                const totalVars = prod.vars.reduce((acc, v) => acc + (this.carrinhoTemp[v.code]?.qtd || 0), 0);
+                const badge = document.getElementById(`badge-prod-${prodIndex}`);
+                if (badge) {
+                    badge.innerText = totalVars;
+                    if (totalVars > 0) badge.classList.remove("hidden");
+                    else badge.classList.add("hidden");
+                }
+            }
+        }
     },
 
     clickCounter(safeRoot, rootName, delta) {
@@ -483,17 +605,27 @@ export const PublicForm = {
         else barra.classList.add("hidden");
     },
 
-    verFotoGrande(url, nome) {
+    verFotoGrande(el) {
+        const url = decodeURIComponent(el.dataset.foto);
+        const nome = decodeURIComponent(el.dataset.nome);
         const modal = document.createElement("div");
-        modal.className = "fixed inset-0 z-[60] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-entrada-suave cursor-zoom-out";
+        modal.className = "fixed inset-0 z-[9999] bg-black/90 backdrop-blur-md flex items-center justify-center p-4 animate-entrada-suave cursor-zoom-out";
         modal.onclick = () => modal.remove();
-        modal.innerHTML = `<div class="relative max-w-full max-h-full" onclick="event.stopPropagation()">
-            <img src="${url}" class="max-w-full max-h-[75vh] rounded-2xl shadow-2xl object-contain">
-            <p class="text-white/80 text-center mt-3 font-bold uppercase text-xs tracking-widest">${nome}</p>
-            <button onclick="this.closest('.fixed').remove()" class="absolute -top-3 -right-3 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
-        </div>`;
+        const inner = document.createElement("div");
+        inner.className = "relative max-w-full max-h-full";
+        inner.onclick = (e) => e.stopPropagation();
+        const img = document.createElement("img");
+        img.src = url;
+        img.className = "max-w-full max-h-[75vh] rounded-2xl shadow-2xl object-contain";
+        const label = document.createElement("p");
+        label.className = "text-white/80 text-center mt-3 font-bold uppercase text-xs tracking-widest";
+        label.textContent = nome;
+        const btn = document.createElement("button");
+        btn.className = "absolute -top-3 -right-3 w-8 h-8 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center text-white hover:bg-white/30 transition-colors";
+        btn.innerHTML = `<i data-lucide="x" class="w-4 h-4"></i>`;
+        btn.onclick = () => modal.remove();
+        inner.append(img, label, btn);
+        modal.appendChild(inner);
         document.body.appendChild(modal);
         if(window.lucide) window.lucide.createIcons();
     },
@@ -520,46 +652,51 @@ export const PublicForm = {
 
         area.innerHTML = `
             <div class="animate-entrada-suave">
-                <div class="text-center mb-6 sm:mb-8">
-                    <div class="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-red-50 to-red-100 text-[#F40009] rounded-full flex items-center justify-center mx-auto mb-4 overflow-hidden shadow-[0_8px_25px_rgba(244,0,9,0.12)] border-4 border-white">${avatarHtml}</div>
-                    <h3 class="text-xl sm:text-2xl font-black text-zinc-900 mb-1">Confirme seu Pedido</h3>
-                    <p class="text-xs text-zinc-400">Verifique se tudo está correto antes de enviar</p>
+                <!-- Header -->
+                <div class="mb-6">
+                    <div class="flex items-center gap-2.5 mb-3">
+                        <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Revisão</span>
+                    </div>
+                    <h3 class="text-3xl sm:text-4xl font-black text-zinc-900 leading-[0.95] uppercase tracking-tight">Confirme<br>seu pedido</h3>
+                    <p class="text-xs text-zinc-400 mt-2">Verifique se tudo está correto antes de enviar</p>
                 </div>
 
-                <!-- Card do colaborador -->
-                <div class="bg-zinc-50 rounded-2xl p-4 sm:p-5 mb-3">
-                    <div class="flex items-center justify-between">
-                        <div>
+                <!-- Colaborador -->
+                <div class="bg-white border-2 border-zinc-200 rounded-xl p-4 sm:p-5 mb-2.5">
+                    <div class="flex items-center gap-3.5">
+                        <div class="w-12 h-12 rounded-lg bg-zinc-50 border border-zinc-100 overflow-hidden flex items-center justify-center text-zinc-300 flex-shrink-0">${avatarHtml}</div>
+                        <div class="flex-1 min-w-0">
                             <p class="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Colaborador</p>
-                            <p class="font-black text-base sm:text-lg text-zinc-900 leading-tight mt-0.5">${this.dadosPedido.colaborador}</p>
+                            <p class="font-black text-base text-zinc-900 leading-tight mt-0.5 truncate">${this.dadosPedido.colaborador}</p>
                         </div>
-                        <span class="text-[10px] font-mono font-bold text-zinc-400 bg-white px-3 py-1.5 rounded-lg border border-zinc-100">MAT: ${this.dadosPedido.matricula}</span>
+                        <span class="text-[10px] font-mono font-bold text-zinc-400 bg-zinc-50 px-2.5 py-1.5 rounded-lg border border-zinc-100 flex-shrink-0">${this.dadosPedido.matricula}</span>
                     </div>
                 </div>
 
-                <!-- Card equipe e DML -->
-                <div class="flex gap-2 mb-3">
-                    <div class="bg-zinc-50 rounded-2xl p-3 sm:p-4 flex-1">
+                <!-- Equipe e DML -->
+                <div class="flex gap-2.5 mb-2.5">
+                    <div class="bg-white border-2 border-zinc-200 rounded-xl p-3.5 flex-1">
                         <p class="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Equipe</p>
                         <p class="font-black text-sm text-zinc-900 mt-0.5 uppercase">${this.dadosPedido.equipe.replace('_', ' ')}</p>
                     </div>
-                    ${this.dadosPedido.setorDML ? `<div class="bg-zinc-50 rounded-2xl p-3 sm:p-4 flex-1">
-                        <p class="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Local (DML)</p>
+                    ${this.dadosPedido.setorDML ? `<div class="bg-white border-2 border-zinc-200 rounded-xl p-3.5 flex-1">
+                        <p class="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Local</p>
                         <p class="font-black text-sm text-zinc-900 mt-0.5 uppercase">${this.dadosPedido.setorDML.replace('DML_', '').replace('_', ' ')}</p>
                     </div>` : ''}
                 </div>
 
-                <!-- Card dos itens -->
-                <div class="bg-zinc-50 rounded-2xl p-4 sm:p-5 mb-6">
+                <!-- Itens -->
+                <div class="bg-white border-2 border-zinc-200 rounded-xl p-4 sm:p-5 mb-7">
                     <div class="flex items-center justify-between mb-3">
                         <p class="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">Itens Solicitados</p>
-                        <span class="text-[10px] font-black text-[#F40009] bg-red-50 px-2 py-0.5 rounded-full">${totalItens} ${totalItens === 1 ? 'item' : 'itens'}</span>
+                        <span class="text-[10px] font-black text-white bg-zinc-900 px-2.5 py-0.5 rounded-md">${totalItens}</span>
                     </div>
                     ${itensHtml}
                 </div>
 
                 <button id="btnEnviarFinal" onclick="PublicForm.concluirSolicitacao()"
-                    class="w-full bg-[#F40009] text-white py-4 rounded-2xl font-black uppercase tracking-[0.15em] text-sm shadow-[0_8px_25px_rgba(244,0,9,0.3)] hover:shadow-[0_12px_35px_rgba(244,0,9,0.4)] hover:scale-[1.01] active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+                    class="w-full bg-[#F40009] text-white py-4 rounded-xl font-black uppercase tracking-[0.15em] text-sm shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-2">
                     Confirmar Pedido <i data-lucide="send" class="w-4 h-4"></i>
                 </button>
                 <button onclick="PublicForm.renderizarSelecaoProdutos('${this.dadosPedido.tipo === 'MATERIAL' ? this.dadosPedido.setorDML : 'SOLICITACAO_EPI_UNIFORME'}')"
@@ -599,27 +736,31 @@ export const PublicForm = {
 
         const containerForm = document.getElementById("containerFormularioPublico");
         const modalHtml = `
-        <div id="modalSolicitacao" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-md flex items-center justify-center p-4 animate-entrada-suave">
-            <div class="bg-white rounded-[2rem] p-6 sm:p-8 max-w-sm w-full text-center shadow-[0_30px_80px_rgba(0,0,0,0.2)] relative">
-                <div class="absolute -top-8 left-1/2 transform -translate-x-1/2">
-                    <div class="w-16 h-16 bg-emerald-500 border-4 border-white text-white rounded-full flex items-center justify-center shadow-[0_6px_20px_rgba(16,185,129,0.4)]">
-                        <i data-lucide="check" class="w-8 h-8"></i>
+        <div id="modalSolicitacao" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-md flex items-center justify-center p-5 animate-fade-in">
+            <div class="bg-white rounded-xl p-6 sm:p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.15)] animate-scale-in">
+                <div class="flex items-center gap-3 mb-5">
+                    <div class="w-10 h-10 bg-emerald-500 text-white rounded-lg flex items-center justify-center flex-shrink-0">
+                        <i data-lucide="check" class="w-5 h-5"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-black text-zinc-900 leading-tight">Pedido Enviado!</h3>
+                        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Registrado com sucesso</p>
                     </div>
                 </div>
-                <div class="mt-6">
-                    <h3 class="text-xl sm:text-2xl font-black text-zinc-900 mb-1">Pedido Enviado!</h3>
-                    <p class="text-zinc-500 text-xs sm:text-sm mb-4">Sua solicitação foi registrada com sucesso.</p>
-                    <div class="bg-zinc-50 rounded-xl p-3 mb-6 border border-zinc-100">
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Protocolo</p>
-                        <p class="text-base font-mono font-black text-zinc-900">${idUnico}</p>
-                    </div>
-                    <button onclick="PublicForm.novoPedido()" class="w-full bg-[#F40009] text-white py-3.5 rounded-xl font-black uppercase tracking-widest text-sm hover:bg-[#d10008] transition-all shadow-[0_6px_20px_rgba(244,0,9,0.3)] active:scale-[0.98]">
-                        Novo Pedido
-                    </button>
-                    <button onclick="PublicForm.finalizarModal()" class="mt-2 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-zinc-600 transition-colors py-2.5">
-                        Fechar
-                    </button>
+                <div class="bg-zinc-50 border-2 border-zinc-200 rounded-lg p-3.5 mb-4">
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Protocolo</p>
+                    <p class="text-lg font-mono font-black text-zinc-900">${idUnico}</p>
                 </div>
+                <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5">
+                    <i data-lucide="clock" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
+                    <p class="text-[11px] text-amber-700 font-bold leading-snug">Você tem até <span class="font-black">48 horas</span> para receber a atualização do status da sua solicitação.</p>
+                </div>
+                <button onclick="PublicForm.novoPedido()" class="w-full bg-[#F40009] text-white py-3.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200">
+                    Novo Pedido
+                </button>
+                <button onclick="PublicForm.finalizarModal()" class="mt-2 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-zinc-600 transition-colors py-2.5">
+                    Fechar
+                </button>
             </div>
         </div>`;
         containerForm.insertAdjacentHTML('beforeend', modalHtml);
