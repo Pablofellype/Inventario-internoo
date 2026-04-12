@@ -388,17 +388,40 @@ export const PublicForm = {
                 const totalVars = prod.vars.reduce((acc, v) => acc + (this.carrinhoTemp[v.code]?.qtd || 0), 0);
                 const badgeHTML = `<div id="badge-${safeRoot}" class="absolute top-1.5 right-1.5 w-6 h-6 bg-[#F40009] text-white text-[10px] font-black rounded-full flex items-center justify-center shadow-lg z-10 ${totalVars > 0 ? 'animate-scale-in' : 'hidden'}">${totalVars}</div>`;
 
+                // Montar resumo das variações selecionadas
+                const varsSelected = prod.vars.filter(v => (this.carrinhoTemp[v.code]?.qtd || 0) > 0);
+                let footerHTML = "";
+                if (varsSelected.length > 0) {
+                    const resumoTags = varsSelected.map(v => {
+                        const q = this.carrinhoTemp[v.code].qtd;
+                        return `<span class="inline-flex items-center gap-1 text-[9px] font-bold bg-emerald-500 text-white px-2.5 py-1 rounded-full uppercase shadow-sm"><i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>${v.label} ×${q}</span>`;
+                    }).join(" ");
+                    footerHTML = `
+                    <div id="resumo-${safeRoot}" class="w-full mt-auto">
+                        <div class="flex flex-wrap gap-1 justify-center mb-2">${resumoTags}</div>
+                        <button onclick="PublicForm.abrirVariacoes(${index})" class="w-full bg-zinc-900 text-white rounded-lg py-2 font-black uppercase text-[9px] tracking-wider hover:bg-zinc-700 active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5">
+                            <i data-lucide="pencil-line" class="w-3 h-3"></i> Editar seleção
+                        </button>
+                    </div>`;
+                } else {
+                    footerHTML = `
+                    <div id="resumo-${safeRoot}" class="w-full mt-auto">
+                        <button onclick="PublicForm.abrirVariacoes(${index})" class="w-full bg-zinc-900 text-white rounded-lg py-2.5 font-black uppercase text-[10px] tracking-wider hover:bg-[#F40009] active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5">
+                            <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+                        </button>
+                    </div>`;
+                }
+
                 htmlLista += `
-                <div class="bg-white p-2.5 sm:p-3 rounded-xl border-2 border-zinc-100 flex flex-col items-center text-center relative group hover:border-zinc-200 transition-all duration-200 opacity-0 animate-fade-up" style="animation-delay: ${delay}s">
+                <div class="bg-white p-2.5 sm:p-3 rounded-xl border-2 ${varsSelected.length > 0 ? 'border-emerald-200' : 'border-zinc-100'} flex flex-col items-center text-center relative group hover:border-zinc-200 transition-all duration-200 opacity-0 animate-fade-up" style="animation-delay: ${delay}s">
                     ${badgeHTML}
                     <div class="relative w-full aspect-square mb-2 cursor-zoom-in overflow-hidden rounded-lg bg-zinc-50" onclick="PublicForm.verFotoGrande(this)" data-foto="${encodeURIComponent(prod.f)}" data-nome="${encodeURIComponent(prod.root)}">
                         <img src="${prod.f}" onerror="this.src='assets/img/placeholder.png'" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500">
                         <div class="absolute bottom-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-200"><i data-lucide="maximize-2" class="w-3 h-3"></i></div>
                     </div>
                     <p class="text-[9px] sm:text-[10px] font-bold text-zinc-700 leading-tight h-7 sm:h-8 overflow-hidden line-clamp-2 uppercase mb-2 w-full px-0.5">${prod.root}</p>
-                    <button onclick="PublicForm.abrirVariacoes(${index})" class="w-full bg-zinc-900 text-white rounded-lg py-2.5 font-black uppercase text-[10px] tracking-wider hover:bg-[#F40009] active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5 mt-auto">
-                        <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
-                    </button>
+                    ${footerHTML}
+                    ${prod.max > 0 ? `<p class="text-[8px] text-zinc-400 mt-1 text-center font-bold">Máx: ${prod.max} un.</p>` : ''}
                 </div>`;
                 return;
             } else if (eUnico) {
@@ -414,7 +437,7 @@ export const PublicForm = {
             }
 
             htmlLista += `
-            <div class="bg-white p-2.5 sm:p-3 rounded-xl border-2 border-zinc-100 flex flex-col items-center text-center relative group hover:border-zinc-200 transition-all duration-200 opacity-0 animate-fade-up" style="animation-delay: ${delay}s">
+            <div id="card-${safeRoot}" class="bg-white p-2.5 sm:p-3 rounded-xl border-2 ${quantidadeInicial > 0 ? 'border-emerald-200' : 'border-zinc-100'} flex flex-col items-center text-center relative group hover:border-zinc-200 transition-all duration-200 opacity-0 animate-fade-up" style="animation-delay: ${delay}s">
                 <div class="relative w-full aspect-square mb-2 cursor-zoom-in overflow-hidden rounded-lg bg-zinc-50" onclick="PublicForm.verFotoGrande(this)" data-foto="${encodeURIComponent(prod.f)}" data-nome="${encodeURIComponent(prod.root)}">
                     <img src="${prod.f}" onerror="this.src='assets/img/placeholder.png'" class="w-full h-full object-contain mix-blend-multiply group-hover:scale-105 transition-transform duration-500">
                     <div class="absolute bottom-1.5 right-1.5 bg-black/50 text-white p-1 rounded-full backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-all duration-200"><i data-lucide="maximize-2" class="w-3 h-3"></i></div>
@@ -424,10 +447,11 @@ export const PublicForm = {
                 ${seletorHTML}
 
                 <div class="flex items-center gap-1.5 sm:gap-2 bg-zinc-50 rounded-lg p-1.5 w-full justify-between mt-auto border border-zinc-100">
-                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root.replace(/'/g, "\\'")}', -1)" class="w-7 h-7 sm:w-8 sm:h-8 bg-white rounded-md text-zinc-400 font-bold hover:text-[#F40009] active:scale-90 transition-all duration-200 text-base sm:text-lg border border-zinc-100">-</button>
+                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root.replace(/'/g, "\\'")}', -1, ${index})" class="w-7 h-7 sm:w-8 sm:h-8 bg-white rounded-md text-zinc-400 font-bold hover:text-[#F40009] active:scale-90 transition-all duration-200 text-base sm:text-lg border border-zinc-100">-</button>
                     <span id="display-${safeRoot}" class="font-black text-sm text-zinc-900 min-w-[20px] transition-all duration-200">${quantidadeInicial}</span>
-                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root.replace(/'/g, "\\'")}', 1)" class="w-7 h-7 sm:w-8 sm:h-8 bg-zinc-900 rounded-md text-white font-bold hover:bg-[#F40009] active:scale-90 transition-all duration-200 text-base sm:text-lg">+</button>
+                    <button onclick="PublicForm.clickCounter('${safeRoot}', '${prod.root.replace(/'/g, "\\'")}', 1, ${index})" class="w-7 h-7 sm:w-8 sm:h-8 bg-zinc-900 rounded-md text-white font-bold hover:bg-[#F40009] active:scale-90 transition-all duration-200 text-base sm:text-lg">+</button>
                 </div>
+                ${prod.max > 0 ? `<p class="text-[8px] text-zinc-400 mt-1.5 text-center font-bold">Máx: ${prod.max} un.</p>` : ''}
             </div>`;
         });
 
@@ -493,7 +517,7 @@ export const PublicForm = {
         const modal = document.createElement("div");
         modal.id = "modalVariacoes";
         modal.className = "fixed inset-0 z-[9999] bg-black/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4 animate-fade-in";
-        modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+        modal.onclick = (e) => { if (e.target === modal) PublicForm.fecharModalVariacoes(prodIndex); };
         modal.innerHTML = `
         <div class="bg-white w-full sm:max-w-md sm:rounded-xl rounded-t-2xl shadow-[0_-10px_40px_rgba(0,0,0,0.12)] overflow-hidden animate-slide-up sm:animate-scale-in" onclick="event.stopPropagation()">
             <div class="w-10 h-1 bg-zinc-300 rounded-full mx-auto mt-3 mb-1 sm:hidden"></div>
@@ -503,9 +527,9 @@ export const PublicForm = {
                 </div>
                 <div class="flex-1 min-w-0">
                     <p class="font-black text-zinc-900 text-sm uppercase truncate">${prod.root}</p>
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-0.5 tracking-wide">Variações e quantidades</p>
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase mt-0.5 tracking-wide">${prod.max > 0 ? `Máximo: ${prod.max} unidade${prod.max > 1 ? 's' : ''} no total` : 'Variações e quantidades'}</p>
                 </div>
-                <button onclick="document.getElementById('modalVariacoes').remove()" class="w-8 h-8 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-400 hover:bg-red-50 hover:text-[#F40009] transition-all duration-200 flex-shrink-0 active:scale-90">
+                <button onclick="PublicForm.fecharModalVariacoes(${prodIndex})" class="w-8 h-8 bg-zinc-100 rounded-lg flex items-center justify-center text-zinc-400 hover:bg-red-50 hover:text-[#F40009] transition-all duration-200 flex-shrink-0 active:scale-90">
                     <i data-lucide="x" class="w-4 h-4"></i>
                 </button>
             </div>
@@ -513,7 +537,7 @@ export const PublicForm = {
                 ${varLinhas}
             </div>
             <div class="p-5 pt-3">
-                <button onclick="document.getElementById('modalVariacoes').remove()" class="w-full bg-[#F40009] text-white py-3.5 rounded-lg font-black uppercase text-xs tracking-wider shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-2">
+                <button onclick="PublicForm.fecharModalVariacoes(${prodIndex})" class="w-full bg-[#F40009] text-white py-3.5 rounded-lg font-black uppercase text-xs tracking-wider shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-2">
                     <i data-lucide="check" class="w-4 h-4"></i> Confirmar
                 </button>
             </div>
@@ -528,7 +552,19 @@ export const PublicForm = {
         if (labelUpper !== "UNICO" && labelUpper !== "ÚNICO" && labelUpper !== "UNIDADE") {
             nomeFinal = `${rootName} [${labelVar}]`;
         }
-        this.alterarQtd(codigo, nomeFinal, delta);
+
+        // Verifica limite máximo considerando TODAS as variações do produto
+        const prod = prodIndex !== undefined ? this.produtosAtual[prodIndex] : null;
+        const max = prod?.max || 0;
+        if (max > 0 && delta > 0 && prod) {
+            const totalAtual = prod.vars.reduce((acc, v) => acc + (this.carrinhoTemp[v.code]?.qtd || 0), 0);
+            if (totalAtual >= max) {
+                this.mostrarAvisoMax(varKey, max);
+                return;
+            }
+        }
+
+        this.alterarQtd(codigo, nomeFinal, delta, 0);
         const display = document.getElementById(`display-${varKey}`);
         const qtd = this.carrinhoTemp[codigo] ? this.carrinhoTemp[codigo].qtd : 0;
         display.innerText = qtd;
@@ -537,7 +573,6 @@ export const PublicForm = {
 
         // Atualiza badge no card
         if (prodIndex !== undefined) {
-            const prod = this.produtosAtual[prodIndex];
             if (prod) {
                 const totalVars = prod.vars.reduce((acc, v) => acc + (this.carrinhoTemp[v.code]?.qtd || 0), 0);
                 const badge = document.getElementById(`badge-prod-${prodIndex}`);
@@ -550,11 +585,67 @@ export const PublicForm = {
         }
     },
 
-    clickCounter(safeRoot, rootName, delta) {
+    fecharModalVariacoes(prodIndex) {
+        const modal = document.getElementById('modalVariacoes');
+        if (modal) modal.remove();
+        this.atualizarResumoCard(prodIndex);
+    },
+
+    atualizarResumoCard(prodIndex) {
+        const prod = this.produtosAtual[prodIndex];
+        if (!prod) return;
+        const safeRoot = `prod-${prodIndex}`;
+        const resumoEl = document.getElementById(`resumo-${safeRoot}`);
+        if (!resumoEl) return;
+
+        const varsSelected = prod.vars.filter(v => (this.carrinhoTemp[v.code]?.qtd || 0) > 0);
+        const totalVars = prod.vars.reduce((acc, v) => acc + (this.carrinhoTemp[v.code]?.qtd || 0), 0);
+
+        // Atualiza a borda do card
+        const card = resumoEl.closest('.bg-white');
+        if (card) {
+            if (varsSelected.length > 0) {
+                card.classList.remove('border-zinc-100');
+                card.classList.add('border-emerald-200');
+            } else {
+                card.classList.remove('border-emerald-200');
+                card.classList.add('border-zinc-100');
+            }
+        }
+
+        if (varsSelected.length > 0) {
+            const resumoTags = varsSelected.map(v => {
+                const q = this.carrinhoTemp[v.code].qtd;
+                return `<span class="inline-flex items-center gap-1 text-[9px] font-bold bg-emerald-500 text-white px-2.5 py-1 rounded-full uppercase shadow-sm"><i data-lucide="check" class="w-3 h-3 stroke-[3]"></i>${v.label} ×${q}</span>`;
+            }).join(" ");
+            resumoEl.innerHTML = `
+                <div class="flex flex-wrap gap-1 justify-center mb-2">${resumoTags}</div>
+                <button onclick="PublicForm.abrirVariacoes(${prodIndex})" class="w-full bg-zinc-900 text-white rounded-lg py-2 font-black uppercase text-[9px] tracking-wider hover:bg-zinc-700 active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5">
+                    <i data-lucide="pencil-line" class="w-3 h-3"></i> Editar seleção
+                </button>`;
+        } else {
+            resumoEl.innerHTML = `
+                <button onclick="PublicForm.abrirVariacoes(${prodIndex})" class="w-full bg-zinc-900 text-white rounded-lg py-2.5 font-black uppercase text-[10px] tracking-wider hover:bg-[#F40009] active:scale-95 transition-all duration-200 flex items-center justify-center gap-1.5">
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i> Adicionar
+                </button>`;
+        }
+
+        // Atualiza badge
+        const badge = document.getElementById(`badge-${safeRoot}`);
+        if (badge) {
+            badge.innerText = totalVars;
+            if (totalVars > 0) { badge.classList.remove("hidden"); badge.classList.add("animate-scale-in"); }
+            else badge.classList.add("hidden");
+        }
+
+        if (window.lucide) window.lucide.createIcons();
+    },
+
+    clickCounter(safeRoot, rootName, delta, prodIndex) {
         const input = document.getElementById(`sel-${safeRoot}`);
         const codigo = input.value;
         const hasVars = input.getAttribute("data-has-vars") === "true";
-        
+
         if (hasVars && (!codigo || codigo === "")) {
             if (delta > 0) {
                 this.toggleDropdown(safeRoot);
@@ -572,7 +663,13 @@ export const PublicForm = {
             nomeFinal = `${rootName} [${labelTamanho}]`;
         }
 
-        this.alterarQtd(codigo, nomeFinal, delta);
+        const prod = prodIndex !== undefined ? this.produtosAtual[prodIndex] : null;
+        const max = prod?.max || 0;
+        const ok = this.alterarQtd(codigo, nomeFinal, delta, max);
+        if (!ok) {
+            this.mostrarAvisoMax(safeRoot, max);
+            return;
+        }
         this.atualizarDisplayCounter(safeRoot);
     },
 
@@ -580,23 +677,53 @@ export const PublicForm = {
         const input = document.getElementById(`sel-${safeRoot}`);
         const codigo = input.value;
         const display = document.getElementById(`display-${safeRoot}`);
-        
+
         if (!codigo) { display.innerText = "0"; return; }
 
         const qtdAtual = this.carrinhoTemp[codigo] ? this.carrinhoTemp[codigo].qtd : 0;
-        
+
         display.innerText = qtdAtual;
         display.classList.remove("text-gray-900");
         display.classList.add("text-[#F40009]", "scale-125");
         setTimeout(() => display.classList.remove("text-[#F40009]", "scale-125", "text-gray-900"), 200);
+
+        // Atualiza borda verde do card
+        const card = document.getElementById(`card-${safeRoot}`);
+        if (card) {
+            if (qtdAtual > 0) {
+                card.classList.remove('border-zinc-100');
+                card.classList.add('border-emerald-200');
+            } else {
+                card.classList.remove('border-emerald-200');
+                card.classList.add('border-zinc-100');
+            }
+        }
     },
 
-    alterarQtd(codigo, nome, delta) {
+    alterarQtd(codigo, nome, delta, max) {
         if (!this.carrinhoTemp[codigo]) { this.carrinhoTemp[codigo] = { nome: nome, qtd: 0 }; }
-        this.carrinhoTemp[codigo].qtd += delta;
+        const novaQtd = this.carrinhoTemp[codigo].qtd + delta;
+        if (max > 0 && novaQtd > max) return false;
+        this.carrinhoTemp[codigo].qtd = novaQtd;
         if (this.carrinhoTemp[codigo].qtd < 0) this.carrinhoTemp[codigo].qtd = 0;
         if (this.carrinhoTemp[codigo].qtd === 0) delete this.carrinhoTemp[codigo];
         this.atualizarBotaoConcluir();
+        return true;
+    },
+
+    mostrarAvisoMax(elementId, max) {
+        const display = document.getElementById(`display-${elementId}`);
+        if (display) {
+            display.classList.add("text-[#F40009]", "scale-125");
+            setTimeout(() => display.classList.remove("scale-125"), 300);
+        }
+        // Toast rápido
+        const toast = document.createElement("div");
+        toast.className = "fixed top-4 left-1/2 -translate-x-1/2 z-[10000] bg-zinc-900 text-white text-[11px] font-bold px-4 py-2.5 rounded-xl shadow-lg flex items-center gap-2 animate-fade-in";
+        toast.innerHTML = `<i data-lucide="alert-circle" class="w-4 h-4 text-[#F40009]"></i> Máximo permitido: ${max} unidade${max > 1 ? 's' : ''}`;
+        document.body.appendChild(toast);
+        if (window.lucide) window.lucide.createIcons();
+        setTimeout(() => { toast.style.opacity = "0"; toast.style.transition = "opacity 0.3s"; setTimeout(() => toast.remove(), 300); }, 2000);
     },
 
     atualizarBotaoConcluir() {

@@ -387,6 +387,9 @@ export const UI = {
     // Popup responsivo que ocupa quase toda a tela no celular
     const larguraPopup = window.innerWidth < 768 ? "95%" : "600px";
 
+    // Dados para exportação - armazena no objeto UI
+    this._pedidoExport = { nome: p.nome, mat: p.mat, equ: p.equ, opc: p.opc, id: p.id, dt: p.dt, its: p.its, status: statusAtual, local: p.local || "" };
+
     Swal.fire({
       background: swalBgColor,
       color: "#000",
@@ -413,11 +416,14 @@ export const UI = {
                                     }</span>
                                 </div>
                             </div>
+                            <button onclick="UI.exportarPedido(UI._pedidoExport)" class="w-10 h-10 bg-white/80 border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-500 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all flex-shrink-0 active:scale-90" title="Exportar para WhatsApp">
+                                <i data-lucide="share-2" class="w-4.5 h-4.5"></i>
+                            </button>
                         </div>
                         
                         <div class="grid grid-cols-${p.local ? '3' : '2'} gap-3 mt-2">
-                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Matrícula</p>
+                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group" onclick="UI.copiarCodigo('${p.mat}')" title="Copiar matrícula">
+                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1">Matrícula <i data-lucide="copy" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                                 <p class="text-base font-black text-zinc-900">${
                                   p.mat
                                 }</p>
@@ -428,8 +434,8 @@ export const UI = {
                                   p.equ
                                 }</p>
                             </div>
-                            ${p.local ? `<div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Local</p>
+                            ${p.local ? `<div class="bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group" onclick="UI.copiarCodigo('${p.local.replace('DML_', '').replace('_', ' ')}')" title="Copiar local">
+                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1">Local <i data-lucide="copy" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
                                 <p class="text-sm font-black text-zinc-900 truncate">${
                                   p.local.replace('DML_', '').replace('_', ' ')
                                 }</p>
@@ -799,6 +805,7 @@ export const UI = {
                 <span class="text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border ${cor} inline-block">${
           p.status || "EM ANÁLISE"
         }</span>
+                ${(!p.status || p.status === "EM ANÁLISE" || p.status === "AGUARDANDO LIDERANÇA") ? `<p class="text-[9px] text-zinc-400 mt-2 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Até 48h para atualização do status</p>` : ""}
             </div>`;
       })
       .join("");
@@ -1242,6 +1249,140 @@ export const UI = {
         title: "Copiado!",
       });
     });
+  },
+
+  exportarPedido(p) {
+    if (!p) return;
+    const colabMatch = (State.colaboradores || []).find(c => String(c.matricula).trim() === String(p.mat).trim());
+    const avatarUrl = (colabMatch && colabMatch.imagem) ? colabMatch.imagem : "";
+    const avatarHTML = avatarUrl
+      ? `<img src="${avatarUrl}" crossorigin="anonymous" style="width:64px;height:64px;border-radius:16px;object-fit:cover;border:3px solid rgba(255,255,255,0.3);box-shadow:0 4px 15px rgba(0,0,0,0.2);">`
+      : `<div style="width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:24px;border:3px solid rgba(255,255,255,0.3);box-shadow:0 4px 15px rgba(0,0,0,0.2);">${(p.nome || "?")[0]}</div>`;
+
+    const itens = p.its.split("|").map(i => {
+      const raw = i.trim().replace(/\s*\{(OK|NAO|FALTA)\}\s*/g, "").replace(/\s*\[.*?\]\s*/g, "").trim();
+      return raw || "";
+    }).filter(Boolean);
+
+    const itensHTML = itens.map(item =>
+      `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;margin-bottom:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#F40009;flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:700;color:#27272a;text-transform:uppercase;">${item}</span>
+      </div>`
+    ).join("");
+
+    const statusMap = {
+      "EM ANÁLISE": { bg: "#fef3c7", color: "#92400e", icon: "⏳" },
+      "APROVADA": { bg: "#d1fae5", color: "#065f46", icon: "✅" },
+      "NÃO APROVADA": { bg: "#fee2e2", color: "#991b1b", icon: "🚫" },
+      "RESERVA APROVADA": { bg: "#d1fae5", color: "#065f46", icon: "✅" },
+      "RESERVA BAIXADA": { bg: "#d1fae5", color: "#065f46", icon: "✅" },
+    };
+    const st = statusMap[p.status] || statusMap["EM ANÁLISE"];
+
+    const localText = p.local ? p.local.replace("DML_", "").replace("_", " ") : "";
+
+    // Criar card invisível para renderizar
+    const cardDiv = document.createElement("div");
+    cardDiv.id = "exportCard";
+    cardDiv.style.cssText = "position:fixed;top:-9999px;left:-9999px;z-index:-1;width:520px;font-family:'Space Grotesk',sans-serif;";
+    cardDiv.innerHTML = `
+      <div style="background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.1);border:2px solid #f4f4f5;">
+        <!-- Header Vermelho -->
+        <div style="background:linear-gradient(135deg,#F40009 0%,#dc0008 100%);padding:28px 28px 24px;">
+          <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+            ${avatarHTML}
+            <div style="flex:1;min-width:0;">
+              <div style="font-size:18px;font-weight:900;color:#fff;text-transform:uppercase;line-height:1.2;">${p.nome}</div>
+              <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:2px;margin-top:5px;">${p.opc || "MATERIAL"}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:10px;">
+            <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
+              <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Matrícula</div>
+              <div style="font-size:16px;font-weight:900;color:#fff;">${p.mat}</div>
+            </div>
+            <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
+              <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Equipe</div>
+              <div style="font-size:15px;font-weight:900;color:#fff;">${p.equ}</div>
+            </div>
+            ${localText ? `<div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
+              <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Local</div>
+              <div style="font-size:15px;font-weight:900;color:#fff;">${localText}</div>
+            </div>` : ""}
+          </div>
+        </div>
+        <!-- Body Branco -->
+        <div style="padding:24px 28px 28px;">
+          <div style="margin-bottom:18px;">
+            <div style="font-size:9px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;">Protocolo</div>
+            <div style="font-size:20px;font-weight:900;color:#18181b;letter-spacing:1px;">${p.id || "N/A"}</div>
+          </div>
+          <div style="height:2px;background:#f4f4f5;margin:18px 0;border-radius:1px;"></div>
+          <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Itens Solicitados</div>
+          ${itensHTML}
+          <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f4f4f5;text-align:center;">
+            <div style="font-size:9px;font-weight:700;color:#d4d4d8;text-transform:uppercase;letter-spacing:2px;">Sistema de Inventário</div>
+            <div style="font-size:8px;color:#d4d4d8;margin-top:3px;">${p.dt || ""}</div>
+          </div>
+        </div>
+      </div>`;
+
+    document.body.appendChild(cardDiv);
+
+    Swal.fire({
+      title: "",
+      html: `
+        <div style="font-family:'Space Grotesk',sans-serif;" class="text-center">
+          <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide mb-1">Pré-visualização</h3>
+          <p class="text-[10px] text-zinc-400 font-bold mb-4">Segure a imagem para salvar e enviar</p>
+          <div id="exportPreview" class="flex justify-center"><div class="w-10 h-10 border-[3px] border-zinc-200 border-t-[#F40009] rounded-full animate-spin"></div></div>
+          <div class="flex gap-2.5 mt-4">
+            <button onclick="Swal.close()" class="flex-1 py-3 rounded-xl font-black uppercase text-[11px] tracking-widest text-zinc-400 hover:bg-zinc-100 transition-all border border-zinc-200 cursor-pointer bg-white">Voltar</button>
+            <button id="btnCopiarExport" onclick="UI.copiarImagemExport()" class="flex-1 bg-green-500 text-white py-3 rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-green-600 active:scale-[0.97] transition-all border-none cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-green-200">
+              <i data-lucide="copy" class="w-4 h-4"></i> Copiar
+            </button>
+          </div>
+          <p class="text-[9px] text-zinc-400 mt-3">No celular: Segure a imagem para salvar e enviar.</p>
+        </div>`,
+      showConfirmButton: false,
+      width: window.innerWidth < 640 ? "95%" : "520px",
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => {
+        if (window.lucide) window.lucide.createIcons();
+        setTimeout(() => {
+          html2canvas(cardDiv, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: null }).then(canvas => {
+            cardDiv.remove();
+            canvas.style.cssText = "width:100%;max-width:380px;border-radius:16px;box-shadow:0 8px 30px rgba(0,0,0,0.12);";
+            const preview = document.getElementById("exportPreview");
+            if (preview) { preview.innerHTML = ""; preview.appendChild(canvas); }
+            // Salvar canvas para copiar depois
+            window._exportCanvas = canvas;
+          }).catch(() => { cardDiv.remove(); });
+        }, 500);
+      },
+      willClose: () => { const el = document.getElementById("exportCard"); if (el) el.remove(); delete window._exportCanvas; }
+    });
+  },
+
+  async copiarImagemExport() {
+    const canvas = window._exportCanvas;
+    if (!canvas) return;
+    const btn = document.getElementById("btnCopiarExport");
+    try {
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
+      await navigator.clipboard.write([new ClipboardItem({ "image/png": blob })]);
+      if (btn) { btn.innerHTML = '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Copiado!'; btn.classList.remove("bg-green-500"); btn.classList.add("bg-zinc-900"); }
+      setTimeout(() => Swal.close(), 1200);
+    } catch {
+      // Fallback: download da imagem
+      const link = document.createElement("a");
+      link.download = "solicitacao.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+      if (btn) { btn.innerHTML = 'Baixado!'; btn.classList.remove("bg-green-500"); btn.classList.add("bg-zinc-900"); }
+      setTimeout(() => Swal.close(), 1200);
+    }
   },
 
   // =========================================================

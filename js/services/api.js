@@ -552,6 +552,7 @@ export const Api = {
         .toUpperCase()
     );
     const iSub = head.findIndex((h) => h.includes("SUB") && h.includes("CODIGO"));
+    const iMax = head.findIndex((h) => h.includes("MAXIMO") || h.includes("MAX"));
     return Array.from(
       lines
         .slice(1)
@@ -564,6 +565,7 @@ export const Api = {
             c: cols[head.indexOf("CODIGO")],
             f: cols[head.indexOf("FOTO")],
             sub: cols[iSub] || "",
+            max: iMax >= 0 ? parseInt(cols[iMax]) || 0 : 0,
           };
           if (!obj.n) return acc;
           const root = obj.n
@@ -588,6 +590,7 @@ export const Api = {
               f: obj.f,
               sub: obj.sub,
               vars: [],
+              max: obj.max,
             });
           acc.get(rootFinal).vars.push({ label: varLFinal, code: obj.c });
 

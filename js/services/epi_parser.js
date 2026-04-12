@@ -18,6 +18,7 @@ export const EpiParser = {
     const iCod = head.findIndex(
       (h) => h.includes("CODIGO") && !h.includes("SUB")
     );
+    const iMax = head.findIndex((h) => h.includes("MAXIMO") || h.includes("MAX"));
 
     return lines
       .slice(1)
@@ -31,6 +32,7 @@ export const EpiParser = {
         const tamanhosStr = (iTam >= 0 ? cols[iTam] : cols[2]) || "";
         const subCodigos = iSub >= 0 ? cols[iSub] : "";
         const codigoUnico = iCod >= 0 ? cols[iCod] : "";
+        const maxQtd = iMax >= 0 ? parseInt(cols[iMax]) || 0 : 0;
 
         if (!nome) return null;
 
@@ -70,6 +72,7 @@ export const EpiParser = {
           root: nome.toUpperCase(),
           f: foto,
           vars: vars,
+          max: maxQtd,
         };
       })
       .filter((item) => item !== null);

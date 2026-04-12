@@ -1,193 +1,165 @@
-📦 Sistema de Planeamento Administrativo & Inventário (PWA)
+<div align="center">
 
-Este projeto é um sistema web progressivo (PWA) desenvolvido para gestão de pedidos de materiais (DML), EPIs e Uniformes. O sistema opera com uma arquitetura Serverless e Offline-First, conectando uma interface moderna diretamente ao Google Sheets (Banco de Dados) e Firebase.
+# Sistema de Inventário & Solicitação
 
-🗺️ Mapa do Projeto (Estrutura de Arquivos)
+**Plataforma web para gestão de pedidos de EPIs, Uniformes e Materiais (DML)**
 
-Abaixo está a estrutura atualizada com os novos módulos de Solicitação Pública, Rastreamento e Lógica de EPIs.
+[![HTML5](https://img.shields.io/badge/HTML5-E34F26?style=for-the-badge&logo=html5&logoColor=white)](https://developer.mozilla.org/pt-BR/docs/Web/HTML)
+[![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)](https://developer.mozilla.org/pt-BR/docs/Web/JavaScript)
+[![TailwindCSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![Firebase](https://img.shields.io/badge/Firebase-FFCA28?style=for-the-badge&logo=firebase&logoColor=black)](https://firebase.google.com/)
+[![Google Sheets](https://img.shields.io/badge/Google_Sheets-34A853?style=for-the-badge&logo=google-sheets&logoColor=white)](https://www.google.com/sheets/about/)
 
-/projeto-inventario/
-│
-├── index.html                # Interface Principal (Login Admin + Acesso Colaborador + Rastreio)
-├── README.md                 # Documentação Técnica
+---
+
+</div>
+
+## Sobre o Projeto
+
+Sistema web moderno desenvolvido para **gestão completa de pedidos de materiais**, conectando colaboradores e administradores em uma interface intuitiva. Opera com arquitetura **Serverless**, utilizando Google Sheets como banco de dados e Firebase para autenticação e cache.
+
+### Destaques
+
+- **Interface moderna** com design responsivo (TailwindCSS + Space Grotesk)
+- **Solicitação pública** sem necessidade de senha para colaboradores
+- **Painel administrativo** com monitoramento em tempo real
+- **Rastreio de pedidos** por protocolo único
+- **Cache inteligente** via Cloud Firestore
+- **Limite de quantidade** configurável por produto
+- **Exportação visual** de pedidos para compartilhamento
+
+---
+
+## Funcionalidades
+
+### Para Colaboradores (Sem Senha)
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Identificação automática** | Busca nome e matrícula na base de colaboradores |
+| **Solicitação por etapas** | Wizard intuitivo: Identificação → Equipe → Tipo → Seleção |
+| **Variações inteligentes** | Produtos com tamanhos/cores exibem seletor dinâmico |
+| **Rastreio de pedido** | Acompanhamento por protocolo com histórico de status |
+| **Limite por produto** | Controle de quantidade máxima configurável na planilha |
+
+### Para Administradores (Com Senha)
+
+| Funcionalidade | Descrição |
+|---|---|
+| **Dashboard** | Visão geral com cards de resumo e ações rápidas |
+| **Monitoramento** | Pedidos em tempo real via planilha PEDIDOS_LOG |
+| **Gestão de estoque** | Visualização de DML e outros setores |
+| **Carrinho inteligente** | Montagem de pedidos de reposição |
+| **Busca spotlight** | Localização rápida de produtos e pedidos |
+| **Atualização de status** | Gerenciamento do ciclo de vida dos pedidos |
+
+---
+
+## Arquitetura
+
+```
+├── index.html                    # Interface principal (SPA)
+├── manifest.json                 # Configuração PWA
 │
 ├── assets/
-│   ├── css/
-│   │   └── style.css         # Estilos globais e Tailwind Customizado
-│   └── video/
-│       └── video_intro_site.mp4
+│   └── css/
+│       └── style.css             # Estilos globais e animações
 │
-└── js/                       # Arquitetura Modular (ES6)
+├── app_script/
+│   └── backend.gs                # Google Apps Script (backend)
+│
+└── js/
+    ├── main.js                   # Inicialização e roteamento
     │
-    ├── main.js               # Ponto de entrada. Controla Autenticação, Rastreio e Inicialização.
+    ├── config/
+    │   ├── firebase.js           # Credenciais Firebase
+    │   └── settings.js           # IDs das planilhas (GIDs)
     │
-    ├── config/               # Configurações do Ambiente
-    │   ├── firebase.js       # Credenciais do Firebase (Auth/Firestore)
-    │   └── settings.js       # IDs das abas do Google Sheets (GIDs) e URLs da API
+    ├── core/
+    │   ├── auth.js               # Autenticação via Firestore
+    │   └── state.js              # Gerenciamento de estado
     │
-    ├── core/                 # Núcleo do Sistema
-    │   ├── auth.js           # Segurança (Validação Automática via Firestore)
-    │   └── state.js          # Gerenciamento de Estado (Memória RAM do app)
+    ├── modules/
+    │   ├── cart.js               # Carrinho de compras (Admin)
+    │   ├── navigation.js         # Roteamento entre telas
+    │   ├── public_form.js        # Formulário de solicitação pública
+    │   ├── search.js             # Busca inteligente
+    │   └── ui.js                 # Componentes visuais e modais
     │
-    ├── modules/              # Componentes Visuais e Lógica de UI
-    │   ├── cart.js           # Carrinho de Compras (Admin)
-    │   ├── navigation.js     # Roteamento entre telas
-    │   ├── public_form.js    # [NOVO] Wizard de Solicitação Pública (Gera ID Único)
-    │   ├── search.js         # Busca inteligente (Spotlight)
-    │   └── ui.js             # Renderização de Cards, Modais e Histórico de Rastreio
-    │
-    └── services/             # Comunicação de Dados
-        ├── api.js            # Gerenciador de Downloads, Envio POST e Atualização de Status
-        ├── cache.js          # Sistema Offline (Cloud Firestore)
-        └── epi_parser.js     # [NOVO] Tradutor exclusivo para lógica de tamanhos (Pipe |)
+    └── services/
+        ├── api.js                # Comunicação com Google Sheets
+        ├── cache.js              # Cache offline (Firestore)
+        └── epi_parser.js         # Parser de EPIs e tamanhos
+```
 
+---
 
-🚀 Funcionalidades Principais
+## Configuração das Planilhas
 
-1. Módulo Administrativo (Com Senha)
+### Aba: `SOLICITACAO_EPI_UNIFORME`
 
-Monitoramento: Acompanhamento de pedidos em tempo real via planilha PEDIDOS_LOG.
+Alimenta o formulário de solicitação pública de EPIs e Uniformes.
 
-Gestão de Estoque: Visualização de materiais de limpeza (DML) e outros setores.
+| Coluna | Cabeçalho | Regra | Exemplo |
+|:---:|---|---|---|
+| A | `NOME` | Nome do material/EPI | `BOTA DE SEGURANÇA` |
+| B | `FOTO` | URL direta da imagem | `https://i.imgur.com/...` |
+| C | `TAMANHOS` | Separados por `\|` ou `UNICO` | `37 \| 38 \| 39 \| 40` |
+| D | `CODIGO` | Código único do produto | `EPI-001` |
+| E | `SUB_CODIGOS` | Código por variação `label:codigo` | `37:EPI-001-37 \| 38:EPI-001-38` |
+| F | `MAXIMO` | Quantidade máxima permitida | `5` |
 
-Carrinho Inteligente: Montagem de pedidos de reposição.
+> **Dica:** Use `UNICO`, `ÚNICO` ou `UNIDADE` na coluna de tamanhos para ocultar o seletor de variação.
 
-2. Módulo Colaborador (Sem Senha - NOVO)
+### Aba: `COLABORADORES`
 
-Identificação Automática: O colaborador digita o nome e o sistema busca a matrícula automaticamente na base.
+Validação de identidade no acesso público.
 
-Fluxo em Etapas (Wizard): Interface simplificada (Identificação -> Equipe -> Tipo -> Seleção).
+| Coluna | Cabeçalho | Dados |
+|:---:|---|---|
+| A | `MATRICULA` | ID do funcionário |
+| B | `NOME` | Nome completo |
+| C | `EQUIPE` | Setor (ex: DIURNO) |
 
-Seleção Inteligente de EPIs:
+### Aba: `PEDIDOS_LOG`
 
-Produtos com vários tamanhos geram uma lista suspensa (Dropdown).
+Registro de todos os pedidos realizados (gerado automaticamente pelo sistema).
 
-Produtos de tamanho único ocultam a seleção automaticamente.
+---
 
-⚙️ Configuração da Planilha Google (Banco de Dados)
+## Tecnologias
 
-O sistema utiliza abas específicas no Google Sheets. Para o módulo novo funcionar, siga estritamente este padrão:
+| Tecnologia | Uso |
+|---|---|
+| **HTML5 + ES6 Modules** | Estrutura e lógica modular |
+| **TailwindCSS (CDN)** | Estilização responsiva |
+| **Firebase Auth/Firestore** | Autenticação e cache |
+| **Google Sheets + Apps Script** | Banco de dados e backend |
+| **SweetAlert2** | Popups e notificações |
+| **Lucide Icons** | Iconografia |
+| **html2canvas** | Exportação visual de pedidos |
 
-Aba: SOLICITACAO_EPI_UNIFORME
+---
 
-Esta aba alimenta o formulário público. O sistema usa o arquivo epi_parser.js para ler esta estrutura específica.
+## Como Executar
 
-Coluna
+1. Clone o repositório:
+```bash
+git clone https://github.com/Pablofellype/Inventario-internoo.git
+```
 
-Cabeçalho
+2. Abra com **Live Server** (VS Code) ou qualquer servidor local — necessário para módulos ES6.
 
-Regra de Preenchimento
+3. Configure as credenciais do Firebase em `js/config/firebase.js`.
 
-Exemplo Real
+4. Configure os IDs das planilhas em `js/config/settings.js`.
 
-A
+> **Nota:** O Google Sheets leva de 3 a 5 minutos para atualizar o CSV publicado. Se alterações na planilha não aparecerem, aguarde e recarregue com `Ctrl + F5`.
 
-NOME
+---
 
-Nome do material ou EPI.
+<div align="center">
 
-BOTA DE SEGURANÇA
+Desenvolvido por **Pablo Fellype**
 
-B
-
-FOTO
-
-Link direto da imagem.
-
-https://i.imgur.com/...
-
-C
-
-TAMANHOS
-
-O SEGREDO ESTÁ AQUI. 
-
-
-
-Use a barra vertical | para separar tamanhos. 
-
-
-
-Escreva UNICO para não mostrar opção.
-
-37 | 38 | 39 | 40 
-
-
-
-ou
-
-
-
- P | M | G 
-
-
-
-ou
-
-
-
- UNICO
-
-Nota: Se você escrever UNICO (ou ÚNICO, UNIDADE) na coluna C, o sistema esconderá a caixa de seleção no site, facilitando o clique.
-
-Aba: COLABORADORES
-
-Usada para validação de matrícula no login público.
-
-Coluna
-
-Cabeçalho
-
-Dados
-
-A
-
-MATRICULA
-
-ID do funcionário (Ex: 102030)
-
-B
-
-NOME
-
-Nome completo (Usado na busca)
-
-C
-
-EQUIPE
-
-Setor (Opcional, Ex: DIURNO)
-
-🛠️ Detalhes Técnicos dos Novos Arquivos
-
-js/services/epi_parser.js
-
-Este é um Tradutor Especialista.
-
-Ele foi criado para não quebrar a lógica antiga do sistema.
-
-Ele lê exclusivamente a coluna de tamanhos com o separador |.
-
-Ele transforma BOTA + 38|39 em um objeto único com variações, permitindo que o front-end crie o menu suspenso.
-
-js/modules/public_form.js
-
-Este arquivo controla a Interface do Usuário (o formulário branco passo-a-passo).
-
-Gerencia o estado do "Carrinho Temporário" do colaborador.
-
-Possui a lógica visual que decide: "Se tiver mais de um tamanho, mostre um <select>; se for único, esconda."
-
-js/config/settings.js
-
-Arquivo onde os IDs (GIDs) das abas são configurados.
-
-Atualização Recente: Adicionado o ID da aba SOLICITACAO_EPI_UNIFORME.
-
-📦 Instalação e Execução
-
-Requisito: Servidor Local (Live Server no VS Code) devido aos módulos ES6.
-
-Cache: O sistema baixa todos os dados ao iniciar (durante o vídeo de intro).
-
-Atualização de Dados: O Google Sheets leva cerca de 3 a 5 minutos para atualizar o CSV publicado. Se mudar algo na planilha e não aparecer no site, aguarde alguns minutos e recarregue a página (CTRL + F5).
+</div>
