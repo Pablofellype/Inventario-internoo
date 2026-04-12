@@ -89,6 +89,8 @@ export const PublicForm = {
                 </div>
             </div>
 
+            <p class="text-[9px] text-zinc-400 mt-3 leading-relaxed opacity-0 animate-fade-up" style="animation-delay: 0.18s">Não encontrou seu nome? Informe seu gestor para que ele atualize seu cadastro.</p>
+
             <!-- Botão continuar -->
             <button id="btnAvancar1" disabled onclick="PublicForm.renderizarEtapa2()"
                 class="mt-8 w-full bg-zinc-100 text-zinc-300 py-4 rounded-xl font-black uppercase tracking-[0.15em] text-sm transition-all duration-500 cursor-not-allowed flex items-center justify-center gap-2 opacity-0 animate-fade-up" style="animation-delay: 0.22s">
@@ -339,10 +341,11 @@ export const PublicForm = {
         const area = document.getElementById("areaEtapas");
         area.innerHTML = `<div class="text-center py-16 sm:py-20"><div class="w-12 h-12 border-[3px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin mx-auto"></div><p class="mt-5 text-[11px] font-black uppercase text-zinc-400 tracking-widest">Carregando Itens...</p></div>`;
 
+        // Sempre busca dados frescos da planilha para garantir atualizações
+        await Api.preCarregarTudo();
         let produtos = await Cache.carregar(categoriaID);
         if (!produtos || produtos.length === 0) {
-            await Api.preCarregarTudo(); 
-            produtos = await Cache.carregar(categoriaID);
+            produtos = [];
         }
 
         const acaoVoltar = this.dadosPedido.tipo === 'MATERIAL' ? 'PublicForm.renderizarEtapa4()' : 'PublicForm.renderizarEtapa3()';
@@ -736,31 +739,35 @@ export const PublicForm = {
 
         const containerForm = document.getElementById("containerFormularioPublico");
         const modalHtml = `
-        <div id="modalSolicitacao" class="fixed inset-0 z-[100] bg-black/50 backdrop-blur-md flex items-center justify-center p-5 animate-fade-in">
-            <div class="bg-white rounded-xl p-6 sm:p-8 max-w-sm w-full shadow-[0_20px_60px_rgba(0,0,0,0.15)] animate-scale-in">
-                <div class="flex items-center gap-3 mb-5">
-                    <div class="w-10 h-10 bg-emerald-500 text-white rounded-lg flex items-center justify-center flex-shrink-0">
-                        <i data-lucide="check" class="w-5 h-5"></i>
+        <div id="modalSolicitacao" class="fixed inset-0 z-[100] bg-black/60 backdrop-blur-md flex items-end sm:items-center justify-center p-0 sm:p-5 animate-fade-in">
+            <div class="bg-white w-full sm:max-w-sm sm:rounded-2xl rounded-t-2xl shadow-[0_-10px_60px_rgba(0,0,0,0.15)] sm:shadow-[0_20px_60px_rgba(0,0,0,0.2)] animate-slide-up sm:animate-scale-in overflow-hidden">
+                <div class="w-10 h-1 bg-zinc-300 rounded-full mx-auto mt-3 sm:hidden"></div>
+                <div class="p-6 sm:p-8 text-center">
+                    <div class="w-16 h-16 bg-emerald-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-[0_8px_25px_rgba(16,185,129,0.3)]">
+                        <i data-lucide="check" class="w-8 h-8 text-white"></i>
                     </div>
-                    <div>
-                        <h3 class="text-lg font-black text-zinc-900 leading-tight">Pedido Enviado!</h3>
-                        <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider">Registrado com sucesso</p>
+                    <h3 class="text-xl font-black text-zinc-900 leading-tight mb-1">Pedido Enviado!</h3>
+                    <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.2em]">Registrado com sucesso</p>
+
+                    <div class="bg-zinc-900 rounded-xl p-4 mt-5 mb-4">
+                        <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-[0.2em] mb-1">Protocolo</p>
+                        <p class="text-xl font-mono font-black text-white tracking-wider">${idUnico}</p>
                     </div>
+
+                    <div class="flex items-center gap-2.5 bg-amber-50 border border-amber-100 rounded-xl p-3.5 mb-6">
+                        <div class="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <i data-lucide="clock" class="w-4 h-4 text-amber-600"></i>
+                        </div>
+                        <p class="text-[11px] text-amber-700 font-bold leading-snug text-left">Até <span class="font-black">48 horas</span> para atualização do status.</p>
+                    </div>
+
+                    <button onclick="PublicForm.novoPedido()" class="w-full bg-[#F40009] text-white py-3.5 rounded-xl font-black uppercase tracking-widest text-xs shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-2">
+                        <i data-lucide="plus" class="w-4 h-4"></i> Novo Pedido
+                    </button>
+                    <button onclick="PublicForm.finalizarModal()" class="mt-3 w-full text-zinc-400 font-bold text-[10px] uppercase tracking-[0.15em] hover:text-zinc-600 transition-colors py-2">
+                        Fechar
+                    </button>
                 </div>
-                <div class="bg-zinc-50 border-2 border-zinc-200 rounded-lg p-3.5 mb-4">
-                    <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-wider mb-0.5">Protocolo</p>
-                    <p class="text-lg font-mono font-black text-zinc-900">${idUnico}</p>
-                </div>
-                <div class="flex items-start gap-2 bg-amber-50 border border-amber-200 rounded-lg p-3 mb-5">
-                    <i data-lucide="clock" class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5"></i>
-                    <p class="text-[11px] text-amber-700 font-bold leading-snug">Você tem até <span class="font-black">48 horas</span> para receber a atualização do status da sua solicitação.</p>
-                </div>
-                <button onclick="PublicForm.novoPedido()" class="w-full bg-[#F40009] text-white py-3.5 rounded-lg font-black uppercase tracking-widest text-sm shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200">
-                    Novo Pedido
-                </button>
-                <button onclick="PublicForm.finalizarModal()" class="mt-2 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-zinc-600 transition-colors py-2.5">
-                    Fechar
-                </button>
             </div>
         </div>`;
         containerForm.insertAdjacentHTML('beforeend', modalHtml);

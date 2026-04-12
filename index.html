@@ -180,16 +180,16 @@
                         <h2 class="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-900">Administração</h2>
                     </div>
                     <p class="text-[10px] text-zinc-400 mb-5">Acesso restrito para equipe do inventário</p>
-                    <div id="caixaLogin" class="bg-white border border-zinc-200 p-1.5 rounded-xl w-full flex items-center gap-2 pl-4 transition-all relative focus-within:border-zinc-400 focus-within:shadow-sm">
-                        <div id="indicadorCaps" class="hidden absolute left-4 text-[#F40009] animate-pulse transition-all" title="Caps Lock Ativado">
-                            <i data-lucide="arrow-big-up" class="w-5 h-5"></i>
+                    <div id="caixaLogin" class="bg-white border border-zinc-200 p-1.5 rounded-xl w-full flex items-center gap-2 pl-4 transition-all relative overflow-hidden focus-within:border-zinc-400 focus-within:shadow-sm">
+                        <input type="password" id="senhaAcesso" placeholder="Senha de acesso" class="bg-transparent border-none text-zinc-900 placeholder-zinc-300 outline-none flex-1 min-w-0 font-bold tracking-wider h-11 text-sm" style="clip-path: inset(0);">
+                        <div id="indicadorCaps" class="hidden text-[#F40009] animate-pulse flex-shrink-0" title="Caps Lock Ativado">
+                            <i data-lucide="arrow-big-up" class="w-4 h-4"></i>
                         </div>
-                        <input type="password" id="senhaAcesso" placeholder="Senha de acesso" class="bg-transparent border-none text-zinc-900 placeholder-zinc-300 outline-none flex-1 font-bold tracking-wider h-11 text-sm z-10">
-                        <button type="button" onclick="Sistema.alternarVerSenha()" class="text-zinc-300 hover:text-zinc-500 transition-colors cursor-pointer border-none bg-transparent p-2 z-20" title="Ver Senha">
+                        <button type="button" onclick="Sistema.alternarVerSenha()" class="text-zinc-300 hover:text-zinc-500 transition-colors cursor-pointer border-none bg-transparent p-2 flex-shrink-0" title="Ver Senha">
                             <i id="iconeOlho" data-lucide="eye" class="w-4 h-4"></i>
                         </button>
-                        <button onclick="Sistema.autenticar(event)" class="bg-zinc-900 text-white w-11 h-11 rounded-lg flex items-center justify-center hover:bg-[#F40009] active:scale-95 transition-all duration-200 cursor-pointer border-none flex-shrink-0 z-20">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+                        <button onclick="Sistema.autenticar(event)" class="bg-zinc-900 text-white w-11 h-11 rounded-lg flex items-center justify-center hover:bg-[#F40009] active:scale-95 transition-all duration-200 cursor-pointer border-none flex-shrink-0">
+                            <i data-lucide="log-in" class="w-4.5 h-4.5"></i>
                         </button>
                     </div>
                 </div>
@@ -265,10 +265,10 @@
         <div id="containerHome" class="animate-entrada-suave text-zinc-900">
 
           <!-- Cards principais -->
-          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5 mb-10 text-zinc-900">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4 md:gap-5 mb-8 sm:mb-10 text-zinc-900">
 
             <!-- Últimos Pedidos -->
-            <div class="bg-white p-5 rounded-2xl border border-zinc-100 flex flex-col h-72 relative overflow-hidden group hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 flex flex-col h-64 sm:h-72 relative overflow-hidden group hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
               <div class="flex justify-between items-center mb-4 z-10">
                 <div class="flex items-center gap-2.5">
                   <div class="w-8 h-8 bg-red-50 rounded-lg flex items-center justify-center">
@@ -288,16 +288,16 @@
             </div>
 
             <!-- Contenção Lateral -->
-            <div onclick="UI.abrirContencaoLateral()" class="bg-white p-5 rounded-2xl border border-zinc-100 h-auto md:h-72 flex flex-col justify-center text-center cursor-pointer hover:border-orange-200 transition-all group shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
-              <div class="w-14 h-14 bg-orange-50 rounded-xl flex items-center justify-center mx-auto mb-5 group-hover:bg-orange-100 group-hover:scale-105 transition-all">
-                <i data-lucide="archive" class="text-orange-500 w-7 h-7"></i>
+            <div onclick="UI.abrirContencaoLateral()" class="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 h-auto sm:h-64 lg:h-72 flex flex-col justify-center text-center cursor-pointer hover:border-orange-200 transition-all group shadow-[0_2px_15px_rgba(0,0,0,0.04)] sm:col-span-2 lg:col-span-1">
+              <div class="w-12 h-12 sm:w-14 sm:h-14 bg-orange-50 rounded-xl flex items-center justify-center mx-auto mb-4 sm:mb-5 group-hover:bg-orange-100 group-hover:scale-105 transition-all">
+                <i data-lucide="archive" class="text-orange-500 w-6 h-6 sm:w-7 sm:h-7"></i>
               </div>
-              <h3 class="text-sm font-black uppercase mb-1 text-zinc-900">Contenção Lateral</h3>
-              <p class="text-zinc-400 text-[10px] font-bold uppercase tracking-widest">Controle de Estoque Rápido</p>
+              <h3 class="text-xs sm:text-sm font-black uppercase mb-1 text-zinc-900">Contenção Lateral</h3>
+              <p class="text-zinc-400 text-[9px] sm:text-[10px] font-bold uppercase tracking-widest">Controle de Estoque Rápido</p>
             </div>
 
             <!-- Estoque Crítico -->
-            <div class="bg-white p-5 rounded-2xl border border-zinc-100 flex flex-col h-72 relative overflow-hidden group hover:border-orange-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 flex flex-col h-64 sm:h-72 relative overflow-hidden group hover:border-orange-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
                 <div class="flex justify-between items-center mb-4 z-10">
                     <div class="flex items-center gap-2.5">
                       <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center">
@@ -322,11 +322,11 @@
 
           <!-- Setor de Gestão -->
           <div id="setorGestao" class="mb-12">
-            <div class="flex items-center gap-3 mb-5">
+            <div class="flex items-center gap-3 mb-4 sm:mb-5">
               <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
-              <h2 class="text-[11px] font-black uppercase tracking-[0.2em] text-zinc-900">Setor de Gestão</h2>
+              <h2 class="text-[10px] sm:text-[11px] font-black uppercase tracking-[0.2em] text-zinc-900">Setor de Gestão</h2>
             </div>
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4 text-zinc-900">
+            <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2.5 sm:gap-3 md:gap-4 text-zinc-900">
               <button onclick="Sistema.selecionarSetor('EPI_UNIFORME', 'EPI & Uniformes')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group text-zinc-900 cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
                 <i data-lucide="shield" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
                 <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">EPI &<br />Uniformes</h3>

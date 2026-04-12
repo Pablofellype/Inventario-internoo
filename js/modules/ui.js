@@ -675,33 +675,31 @@ export const UI = {
   abrirPopupRastreio() {
     Swal.fire({
       html: `
-        <div style="font-family: 'Space Grotesk', sans-serif;" class="text-left">
-            <div class="flex items-center gap-2.5 mb-6">
-                <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
-                <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Rastreamento</span>
+        <div style="font-family: 'Space Grotesk', sans-serif;">
+            <div class="text-center mb-6">
+                <div class="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+                    <i data-lucide="radar" class="w-6 h-6 text-white"></i>
+                </div>
+                <h2 class="text-lg font-black uppercase tracking-wide text-zinc-900">Rastrear Pedido</h2>
+                <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.15em] mt-1">Digite o ID ou matrícula</p>
             </div>
-            <h2 class="text-2xl sm:text-3xl font-black uppercase tracking-tight text-zinc-900 leading-[0.95] mb-2">Acompanhe<br>seu pedido</h2>
-            <p class="text-[13px] text-zinc-400 mb-7 leading-relaxed">Digite o <span class="font-bold text-zinc-600">ID do pedido</span> ou sua <span class="font-bold text-zinc-600">matrícula</span> para consultar.</p>
             <div class="relative group">
-                <input id="inputRastreio" type="text" placeholder="ID ou Matrícula" class="w-full bg-zinc-50 border-2 border-zinc-200 rounded-xl p-4 pl-12 text-base font-bold text-zinc-900 outline-none focus:border-zinc-900 focus:bg-white transition-all duration-200 uppercase placeholder-zinc-300" style="font-family: 'Space Grotesk', sans-serif;">
-                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-zinc-900 transition-colors duration-200">
+                <input id="inputRastreio" type="text" placeholder="Ex: #0425962 ou 12345" class="w-full bg-zinc-50 border-2 border-zinc-200 rounded-xl p-4 pl-12 text-sm font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:bg-white focus:ring-4 focus:ring-red-50 transition-all duration-200 uppercase placeholder-zinc-300" style="font-family: 'Space Grotesk', sans-serif;">
+                <div class="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-300 group-focus-within:text-[#F40009] transition-colors duration-200">
                     <i data-lucide="search" class="w-5 h-5"></i>
                 </div>
             </div>
-            <div class="flex gap-2.5 mt-5">
-                <button onclick="
-                    const val = document.getElementById('inputRastreio').value;
-                    if(!val){document.getElementById('inputRastreio').style.borderColor='#F40009';setTimeout(()=>document.getElementById('inputRastreio').style.borderColor='',800);return;}
-                    Swal.close();
-                    window.Sistema.processarRastreio(val);
-                " class="flex-1 bg-zinc-900 text-white py-3.5 rounded-xl font-black uppercase text-[11px] tracking-widest hover:bg-[#F40009] active:scale-[0.97] transition-all duration-200 flex items-center justify-center gap-2 border-none cursor-pointer">
-                    Buscar
-                    <i data-lucide="arrow-right" class="w-4 h-4"></i>
-                </button>
-                <button onclick="Swal.close()" class="px-6 py-3.5 rounded-xl font-black uppercase text-[11px] tracking-widest text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 transition-all duration-200 border-none cursor-pointer bg-transparent">
-                    Cancelar
-                </button>
-            </div>
+            <button onclick="
+                const val = document.getElementById('inputRastreio').value;
+                if(!val){document.getElementById('inputRastreio').style.borderColor='#F40009';setTimeout(()=>document.getElementById('inputRastreio').style.borderColor='',800);return;}
+                Swal.close();
+                window.Sistema.processarRastreio(val);
+            " class="w-full mt-4 bg-[#F40009] text-white py-3.5 rounded-xl font-black uppercase text-[11px] tracking-widest hover:shadow-[0_8px_25px_rgba(244,0,9,0.3)] hover:translate-y-[-1px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-2 border-none cursor-pointer">
+                <i data-lucide="search" class="w-4 h-4"></i> Buscar
+            </button>
+            <button onclick="Swal.close()" class="w-full mt-2 py-2.5 font-bold text-[10px] uppercase tracking-[0.15em] text-zinc-400 hover:text-zinc-600 transition-colors border-none cursor-pointer bg-transparent">
+                Cancelar
+            </button>
         </div>
       `,
       showConfirmButton: false,
@@ -709,9 +707,9 @@ export const UI = {
       background: "#fff",
       padding: "1.5rem",
       customClass: { popup: "swal2-popup-custom" },
-      width: window.innerWidth < 640 ? "92%" : "420px",
+      width: window.innerWidth < 640 ? "92%" : "400px",
       didOpen: () => {
-        window.lucide.createIcons();
+        if (window.lucide) window.lucide.createIcons();
         const input = document.getElementById("inputRastreio");
         input.focus();
         input.addEventListener("keydown", (e) => {
@@ -733,11 +731,19 @@ export const UI = {
   mostrarHistoricoUsuario(lista) {
     if (lista.length === 0) {
       Swal.fire({
-        icon: "info",
-        title: "Nada Encontrado",
-        text: "Não encontramos solicitações para esta matrícula.",
+        title: "",
+        html: `
+          <div class="flex flex-col items-center py-2">
+            <div class="w-14 h-14 bg-zinc-100 rounded-2xl flex items-center justify-center mb-4 border-2 border-zinc-200">
+              <i data-lucide="search-x" class="w-6 h-6 text-zinc-400"></i>
+            </div>
+            <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Nada Encontrado</h3>
+            <p class="text-[11px] text-zinc-400 font-bold mt-1">Não encontramos solicitações para esta matrícula.</p>
+          </div>`,
         confirmButtonColor: "#F40009",
+        confirmButtonText: "ENTENDI",
         customClass: { popup: "swal2-popup-custom" },
+        didOpen: () => { if (window.lucide) window.lucide.createIcons(); }
       });
       return;
     }
@@ -756,12 +762,12 @@ export const UI = {
         const cor = statusMap[p.status] || "bg-gray-100 text-gray-600 border-gray-200";
 
         return `
-            <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm mb-3 text-left relative overflow-hidden group hover:border-red-200 transition-colors">
-                <div class="flex justify-between items-start mb-2">
-                    <span class="text-[10px] font-black bg-gray-50 px-2 py-1 rounded-lg text-gray-500 border border-gray-100">#${
+            <div class="bg-white p-4 rounded-xl border border-zinc-100 shadow-sm mb-2.5 text-left relative overflow-hidden group hover:border-zinc-200 transition-all duration-200">
+                <div class="flex justify-between items-center mb-3">
+                    <span class="text-[9px] font-black bg-zinc-900 text-white px-2.5 py-1 rounded-lg tracking-wide">${
                       p.id
                     }</span>
-                    <span class="text-[10px] font-bold text-gray-400">${
+                    <span class="text-[9px] font-bold text-zinc-400 tracking-wide">${
                       p.dt.split(" ")[0]
                     }</span>
                 </div>
@@ -798,12 +804,21 @@ export const UI = {
       .join("");
 
     Swal.fire({
-      title: "Histórico Recente",
-      width: window.innerWidth < 640 ? "90%" : "32em",
-      html: `<div class="bg-gray-50 p-2 rounded-3xl mt-4 max-h-[60vh] overflow-y-auto custom-scroll">${htmlLista}</div>`,
+      title: "",
+      width: window.innerWidth < 640 ? "92%" : "32em",
+      html: `
+        <div class="text-center mb-4">
+          <div class="w-12 h-12 bg-zinc-900 rounded-xl flex items-center justify-center mx-auto mb-3 shadow-lg">
+            <i data-lucide="clock" class="w-5 h-5 text-white"></i>
+          </div>
+          <h3 class="text-lg font-black text-zinc-900 uppercase tracking-wide">Histórico</h3>
+          <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.15em] mt-0.5">Suas solicitações recentes</p>
+        </div>
+        <div class="bg-zinc-50 p-2.5 rounded-2xl max-h-[55vh] overflow-y-auto custom-scroll">${htmlLista}</div>`,
       confirmButtonText: "FECHAR",
-      confirmButtonColor: "#111827",
+      confirmButtonColor: "#F40009",
       customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); }
     });
   },
 

@@ -101,11 +101,19 @@ window.Sistema = {
       caixaLogin.classList.add("animate-tremer");
 
       Swal.fire({
-        icon: "error",
-        title: "Acesso Negado",
-        text: "Chave incorreta.",
+        title: "",
+        html: `
+          <div class="flex flex-col items-center py-2">
+            <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mb-4 border-2 border-red-100">
+              <i data-lucide="lock" class="w-6 h-6 text-[#F40009]"></i>
+            </div>
+            <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Acesso Negado</h3>
+            <p class="text-[11px] text-zinc-400 font-bold mt-1">Chave incorreta. Tente novamente.</p>
+          </div>`,
         confirmButtonColor: "#F40009",
+        confirmButtonText: "TENTAR NOVAMENTE",
         customClass: { popup: "swal2-popup-custom" },
+        didOpen: () => { if (window.lucide) window.lucide.createIcons(); }
       });
     }
   },
@@ -225,12 +233,17 @@ window.Sistema = {
 
   processarRastreio: async (termo) => {
     Swal.fire({
-      title: "Buscando informações...",
-      text: "Consultando histórico completo no servidor...",
+      title: "",
+      html: `
+        <div class="flex flex-col items-center py-2">
+          <div class="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <div class="w-6 h-6 border-[3px] border-zinc-600 border-t-white rounded-full animate-spin"></div>
+          </div>
+          <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Buscando...</h3>
+          <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.15em] mt-1">Consultando histórico no servidor</p>
+        </div>`,
       allowOutsideClick: false,
-      didOpen: () => Swal.showLoading(),
-      background: "#fff",
-      color: "#000",
+      showConfirmButton: false,
       customClass: { popup: "swal2-popup-custom" },
     });
 
@@ -250,11 +263,19 @@ window.Sistema = {
         UI.mostrarResultadoUnico(pedido);
       } else {
         Swal.fire({
-          icon: "error",
-          title: "Não encontrado",
-          text: "Nenhum pedido recente com este ID.",
+          title: "",
+          html: `
+            <div class="flex flex-col items-center py-2">
+              <div class="w-14 h-14 bg-zinc-100 rounded-2xl flex items-center justify-center mb-4 border-2 border-zinc-200">
+                <i data-lucide="search-x" class="w-6 h-6 text-zinc-400"></i>
+              </div>
+              <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Não Encontrado</h3>
+              <p class="text-[11px] text-zinc-400 font-bold mt-1">Nenhum pedido recente com este ID.</p>
+            </div>`,
           confirmButtonColor: "#F40009",
+          confirmButtonText: "ENTENDI",
           customClass: { popup: "swal2-popup-custom" },
+          didOpen: () => { if (window.lucide) window.lucide.createIcons(); }
         });
       }
     }

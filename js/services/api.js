@@ -551,7 +551,7 @@ export const Api = {
         .replace(/[\u0300-\u036f]/g, "")
         .toUpperCase()
     );
-    const iSub = head.indexOf("SUB_CODIGOS");
+    const iSub = head.findIndex((h) => h.includes("SUB") && h.includes("CODIGO"));
     return Array.from(
       lines
         .slice(1)
@@ -617,6 +617,15 @@ export const Api = {
               .filter((v) => v.label);
 
             if (parsed.length > 0) {
+              // Garante código único para cada variação
+              const codes = parsed.map((v) => v.code);
+              const temDuplicados = new Set(codes).size < codes.length;
+              const todosIguais = new Set(codes).size === 1 && parsed.length > 1;
+              parsed.forEach((v) => {
+                if (!v.code || temDuplicados || todosIguais) {
+                  v.code = `${obj.c || rootFinal}-${v.label}`.toUpperCase().replace(/\s+/g, "-");
+                }
+              });
               acc.get(rootFinal).vars = parsed;
             }
           }
