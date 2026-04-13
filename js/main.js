@@ -216,6 +216,8 @@ window.Sistema = {
           pedido.status = novoStatus;
           if (codigoSap !== undefined) pedido.sap = codigoSap;
         }
+        // Atualiza a cor do card na lista imediatamente
+        UI.atualizarCorCardLista(id, novoStatus);
       } else {
         msg.innerText = "Erro de conexão. Tente novamente.";
         msg.className =

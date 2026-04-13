@@ -184,6 +184,7 @@ export const UI = {
         ? "bg-amber-300"
         : "bg-blue-400";
 
+      card.id = `card-pedido-${p.id}`;
       card.className =
         "order-card relative rounded-[2.5rem] p-6 flex flex-col animate-entrada-suave cursor-pointer shadow-xl text-left text-zinc-900 hover:scale-[1.02] transition-transform border " +
         cardBgClass;
@@ -206,7 +207,7 @@ export const UI = {
       const dataFormatada = p.dt.split(" ")[0];
 
       card.innerHTML = `
-                <div class="absolute left-2 top-6 bottom-6 w-1.5 rounded-full ${cardBarClass}"></div>
+                <div id="card-bar-${p.id}" class="absolute left-2 top-6 bottom-6 w-1.5 rounded-full ${cardBarClass}"></div>
                 <div class="flex justify-between items-start mb-6 text-left">
                     <div class="relative">
                         <img src="${urlAvatar}" class="w-14 h-14 rounded-2xl shadow-sm border-2 border-white object-cover" alt="Perfil" onerror="this.src='${fallbackAvatar}';this.onerror=null;">
@@ -1172,6 +1173,39 @@ export const UI = {
         : isAmarelo
         ? "#fffbeb"
         : "#ffffff";
+    }
+  },
+
+  atualizarCorCardLista(id, status) {
+    const card = document.getElementById(`card-pedido-${id}`);
+    const bar = document.getElementById(`card-bar-${id}`);
+    if (!card) return;
+
+    const upper = String(status || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isReprovada = upper.includes("NAO APROV") || upper.includes("ERRO") || upper.includes("FALTA");
+    const isAprovada = (upper.includes("APROVADA") || upper.includes("BAIXADA")) && !isReprovada;
+    const isAmarela = upper.includes("ANALISE") || upper.includes("AGUARDANDO");
+
+    // Remover classes antigas do card
+    card.classList.remove(
+      "bg-emerald-50/60", "border-emerald-200",
+      "bg-red-50/60", "border-red-200",
+      "bg-amber-50/60", "border-amber-200",
+      "bg-white", "border-gray-100"
+    );
+    // Adicionar novas classes
+    if (isAprovada) { card.classList.add("bg-emerald-50/60", "border-emerald-200"); }
+    else if (isReprovada) { card.classList.add("bg-red-50/60", "border-red-200"); }
+    else if (isAmarela) { card.classList.add("bg-amber-50/60", "border-amber-200"); }
+    else { card.classList.add("bg-white", "border-gray-100"); }
+
+    // Atualizar barra lateral
+    if (bar) {
+      bar.classList.remove("bg-emerald-400", "bg-red-400", "bg-amber-300", "bg-blue-400");
+      if (isAprovada) bar.classList.add("bg-emerald-400");
+      else if (isReprovada) bar.classList.add("bg-red-400");
+      else if (isAmarela) bar.classList.add("bg-amber-300");
+      else bar.classList.add("bg-blue-400");
     }
   },
 

@@ -254,8 +254,8 @@ export const PublicForm = {
         const isSeguranca = this.dadosPedido.equipe.startsWith('SEGURANCA');
         const botaoMaterial = isSeguranca ? '' : `
                 <button onclick="PublicForm.selecionarTipo('MATERIAL')" class="group w-full p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50/30 transition-all duration-200 cursor-pointer flex items-center gap-4 active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: 0.22s">
-                    <div class="w-12 h-12 bg-emerald-50 rounded-lg flex items-center justify-center text-emerald-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
-                        <svg viewBox="0 0 24 24" class="w-5.5 h-5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10a4 4 0 0 0 0 8h9a4 4 0 0 0 0-8H3z"></path><path d="M12 10V6a4 4 0 0 1 8 0v8a4 4 0 0 1-8 0"></path><circle cx="6" cy="14" r="1.5"></circle></svg>
+                    <div class="w-16 h-16 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200">
+                        <img src="./assets/img/material_fundo_trasparente.png" alt="Material" class="w-14 h-14 object-contain">
                     </div>
                     <div class="flex-1"><p class="font-black text-zinc-900 group-hover:text-emerald-600 uppercase text-sm leading-tight transition-colors">Material de Limpeza</p><p class="text-[10px] text-zinc-400 mt-0.5">Produtos e insumos</p></div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-emerald-500 transition-colors"></i>
@@ -272,7 +272,7 @@ export const PublicForm = {
             </div>
             <div class="flex flex-col gap-2.5">
                 <button onclick="PublicForm.selecionarTipo('SOLICITACAO_EPI_UNIFORME')" class="group w-full p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 cursor-pointer flex items-center gap-4 active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: 0.12s">
-                    <div class="w-12 h-12 bg-blue-50 rounded-lg flex items-center justify-center text-blue-500 flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="shirt" class="w-5.5 h-5.5"></i></div>
+                    <div class="w-16 h-16 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><img src="./assets/img/epi_fundo_trasparente.png" alt="EPI" class="w-14 h-14 object-contain"></div>
                     <div class="flex-1"><p class="font-black text-zinc-900 group-hover:text-blue-600 uppercase text-sm leading-tight transition-colors">EPI & Uniforme</p><p class="text-[10px] text-zinc-400 mt-0.5">Equipamentos e roupas</p></div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-blue-500 transition-colors"></i>
                 </button>

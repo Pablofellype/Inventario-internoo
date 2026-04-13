@@ -159,6 +159,7 @@ export const Api = {
             nome: col[1],
             equipe: col[2] || "DIURNO",
             imagem: col[3] || "",
+            numero: col[4] || "",
           };
         })
         .filter((c) => c.nome && c.matricula);
