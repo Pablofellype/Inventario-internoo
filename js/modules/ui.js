@@ -866,27 +866,36 @@ export const UI = {
     const htmlLista = lista
       .slice(0, 5)
       .map((p) => {
-        const statusMap = {
-          "AGUARDANDO LIDERANÇA": "bg-yellow-100 text-yellow-700 border-yellow-200",
-          "EM ANÁLISE": "bg-yellow-100 text-yellow-700 border-yellow-200",
-          "APROVADA": "bg-green-100 text-green-700 border-green-200",
-          "RESERVA APROVADA": "bg-green-100 text-green-700 border-green-200",
-          "RESERVA BAIXADA": "bg-green-100 text-green-700 border-green-200",
-          "NÃO APROVADA": "bg-red-100 text-red-700 border-red-200",
-        };
-        const cor = statusMap[p.status] || "bg-gray-100 text-gray-600 border-gray-200";
+        const statusKey = (p.status || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+        const isAprov = (statusKey.includes("APROVADA") || statusKey.includes("BAIXADA")) && !statusKey.includes("NAO");
+        const isRepr = statusKey.includes("NAO APROV");
+        const isAnalise = !isAprov && !isRepr;
+
+        const statusDot = isAprov ? "bg-emerald-500" : isRepr ? "bg-red-500" : "bg-amber-400";
+        const statusLabel = isAprov ? "Aprovada" : isRepr ? "Não Aprovada" : "Em Análise";
+        const statusBadge = isAprov ? "text-emerald-700 bg-emerald-50 border-emerald-200" : isRepr ? "text-red-700 bg-red-50 border-red-200" : "text-amber-700 bg-amber-50 border-amber-200";
+        const cardBorder = isAprov ? "border-emerald-100" : isRepr ? "border-red-100" : "border-[#e5e7eb]";
+
+        const temSap = p.sap && p.sap !== "NÃO APROVADA" && isAprov;
+        const hora = p.dt.includes(" ") ? p.dt.split(" ")[1].substring(0, 5) : "";
 
         return `
-            <div class="bg-white p-4 rounded-xl border border-zinc-100 shadow-sm mb-2.5 text-left relative overflow-hidden group hover:border-zinc-200 transition-all duration-200">
-                <div class="flex justify-between items-center mb-3">
-                    <span class="text-[9px] font-black bg-zinc-900 text-white px-2.5 py-1 rounded-lg tracking-wide">${
-                      p.id
-                    }</span>
-                    <span class="text-[9px] font-bold text-zinc-400 tracking-wide">${
-                      p.dt.split(" ")[0]
-                    }</span>
+            <div class="bg-white p-4 rounded-2xl border ${cardBorder} mb-2 text-left relative overflow-hidden transition-all">
+                <div class="absolute top-0 left-0 w-1 h-full rounded-l-2xl ${statusDot}"></div>
+
+                <div class="flex items-center justify-between mb-3 pl-2">
+                    <div class="flex items-center gap-2">
+                        <div class="w-2 h-2 rounded-full ${statusDot}"></div>
+                        <span class="text-[10px] font-black uppercase ${isAprov ? 'text-emerald-600' : isRepr ? 'text-red-500' : 'text-amber-600'}">${statusLabel}</span>
+                        ${temSap ? `<span class="text-[9px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-lg">SAP: ${p.sap}</span>` : ''}
+                    </div>
+                    <div class="flex items-center gap-1.5 text-[#9ca3af]">
+                        <span class="text-[9px] font-bold">${p.dt.split(" ")[0]}</span>
+                        ${hora ? `<span class="text-[9px] font-bold">${hora}</span>` : ''}
+                    </div>
                 </div>
-                <div class="mb-3">${p.its.split("|").map(item => {
+
+                <div class="pl-2 space-y-1 mb-3">${p.its.split("|").map(item => {
                   const raw = item.trim();
                   const isOK = raw.includes("{OK}");
                   const isNAO = raw.includes("{NAO}");
@@ -894,27 +903,20 @@ export const UI = {
                   const clean = raw.replace(/\s*\{(OK|NAO|FALTA)\}\s*/g, "").replace(/\s*\[.*?\]\s*/g, "").trim();
                   if (!clean) return "";
                   const icon = isOK
-                    ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white mr-1 flex-shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>'
+                    ? '<div class="w-4 h-4 rounded-md bg-emerald-500 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>'
                     : isNAO
-                    ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-red-500 text-white mr-1 flex-shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></span>'
+                    ? '<div class="w-4 h-4 rounded-md bg-red-400 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12"/></svg></div>'
                     : isFalta
-                    ? '<span class="inline-flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white mr-1 flex-shrink-0"><svg class="w-3 h-3" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg></span>'
-                    : '';
-                  const textClass = isNAO ? "text-zinc-400 line-through" : isFalta ? "text-amber-700" : "text-zinc-800";
-                  return `<div class="flex items-center py-0.5"><span class="flex-shrink-0">${icon}</span><span class="text-sm font-bold ${textClass}">${clean}</span></div>`;
+                    ? '<div class="w-4 h-4 rounded-md bg-amber-400 flex items-center justify-center flex-shrink-0"><svg class="w-2.5 h-2.5 text-white" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M12 9v4M12 17h.01"/></svg></div>'
+                    : '<div class="w-4 h-4 rounded-md bg-[#e5e7eb] flex-shrink-0"></div>';
+                  const textClass = isNAO ? "text-[#9ca3af] line-through" : isFalta ? "text-amber-700" : "text-[#111827]";
+                  return `<div class="flex items-center gap-2 py-0.5">${icon}<span class="text-[12px] font-bold uppercase ${textClass}">${clean}</span></div>`;
                 }).join("")}</div>
-                ${
-                  p.sap &&
-                  p.sap !== "NÃO APROVADA" &&
-                  (p.status === "APROVADA" || p.status === "RESERVA APROVADA" ||
-                    p.status === "RESERVA BAIXADA")
-                    ? `<span class="text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border bg-red-50 text-red-600 border-red-100 inline-block mb-2">SAP: ${p.sap}</span>`
-                    : ""
-                }
-                <span class="text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border ${cor} inline-block">${
-          p.status || "EM ANÁLISE"
-        }</span>
-                ${(!p.status || p.status === "EM ANÁLISE" || p.status === "AGUARDANDO LIDERANÇA") ? `<p class="text-[9px] text-zinc-400 mt-2 flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Até 48h para atualização do status</p>` : ""}
+
+                <div class="flex items-center justify-between pl-2">
+                    <span class="text-[8px] font-bold text-[#9ca3af] bg-[#f3f4f6] px-2 py-0.5 rounded-lg">#${p.id}</span>
+                    ${isAnalise ? `<span class="text-[8px] text-[#9ca3af] font-bold flex items-center gap-1"><i data-lucide="clock" class="w-3 h-3"></i> Até 48h para atualização</span>` : ''}
+                </div>
             </div>`;
       })
       .join("");
