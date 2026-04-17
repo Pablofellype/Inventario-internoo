@@ -299,6 +299,9 @@ window.Sistema = {
     }
   },
 
+  // --- Filtro por Categoria (Monitor) ---
+  filtrarCategoria: (cat) => UI.filtrarCategoria(cat),
+
   // --- API e Dados ---
   sincronizarPedidos: (tudo) => {
     if (tudo) {

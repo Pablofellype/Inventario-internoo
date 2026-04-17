@@ -285,10 +285,12 @@ export const PublicForm = {
 
     selecionarTipo(tipo) {
         this.dadosPedido.tipo = tipo;
-        this.carrinhoTemp = {}; 
+        this.carrinhoTemp = {};
         if (tipo === 'MATERIAL') {
             this.renderizarEtapa4();
         } else {
+            // Limpar DML ao trocar para EPI/Uniforme
+            this.dadosPedido.setorDML = "";
             this.renderizarSelecaoProdutos('SOLICITACAO_EPI_UNIFORME');
         }
     },

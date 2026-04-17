@@ -109,6 +109,43 @@ export const UI = {
   // =========================================================
   // 3. RENDERIZAÇÃO DE PEDIDOS
   // =========================================================
+  _categoriaAtiva: "TODOS",
+
+  filtrarCategoria(cat) {
+    this._categoriaAtiva = cat;
+    // Atualizar abas visuais
+    document.querySelectorAll(".aba-categoria").forEach(btn => btn.classList.remove("aba-ativa"));
+    const abaId = cat === "TODOS" ? "aba-todos" : cat === "EPI" ? "aba-epi" : "aba-material";
+    const aba = document.getElementById(abaId);
+    if (aba) aba.classList.add("aba-ativa");
+    // Re-renderizar com filtro atual
+    const buscaInput = document.getElementById("buscaPedido");
+    const termoBusca = buscaInput ? buscaInput.value : "";
+    const btnTodos = document.querySelector('[onclick*="sincronizarPedidos(true)"]');
+    const tudo = State._filtroTudo || false;
+    this.renderizarPedidos(tudo, termoBusca);
+  },
+
+  _isEPI(p) {
+    const opc = (p.opc || "").toUpperCase();
+    return opc.includes("EPI") || opc.includes("UNIFORME");
+  },
+
+  _atualizarContadoresAbas(dados) {
+    const abas = document.getElementById("abasCategoria");
+    if (abas) abas.classList.remove("hidden");
+
+    const totalEpi = dados.filter(p => this._isEPI(p)).length;
+    const totalMat = dados.filter(p => !this._isEPI(p)).length;
+
+    const contTodos = document.getElementById("cont-todos");
+    const contEpi = document.getElementById("cont-epi");
+    const contMat = document.getElementById("cont-material");
+    if (contTodos) contTodos.textContent = dados.length;
+    if (contEpi) contEpi.textContent = totalEpi;
+    if (contMat) contMat.textContent = totalMat;
+  },
+
   renderizarPedidos(tudo = false, termoBusca = "") {
     const container = document.getElementById("gradeAtivos");
     const contador = document.getElementById("totalPedidosMonitor");
@@ -116,6 +153,7 @@ export const UI = {
     if (!container) return;
     container.innerHTML = "";
 
+    State._filtroTudo = tudo;
     let dados = State.pedidos || [];
 
     if (termoBusca && termoBusca.trim() !== "") {
@@ -140,6 +178,17 @@ export const UI = {
       dados = dados.filter((p) => p.dataObj && p.dataObj >= hoje);
     }
 
+    // Atualizar contadores das abas antes do filtro de categoria
+    this._atualizarContadoresAbas(dados);
+
+    // Aplicar filtro de categoria
+    const cat = this._categoriaAtiva || "TODOS";
+    if (cat === "EPI") {
+      dados = dados.filter(p => this._isEPI(p));
+    } else if (cat === "MATERIAL") {
+      dados = dados.filter(p => !this._isEPI(p));
+    }
+
     if (contador) contador.innerText = dados.length;
 
     if (dados.length === 0) {
@@ -153,9 +202,64 @@ export const UI = {
     }
     document.getElementById("vazio").classList.add("hidden");
 
-    dados.forEach((p) => {
+    // Se estiver na aba Material, agrupar por DML
+    if (cat === "MATERIAL") {
+      this._renderizarAgrupadoPorDML(dados, container);
+    } else {
+      dados.forEach((p) => this._renderizarCardPedido(p, container));
+    }
+
+    if (window.lucide) window.lucide.createIcons();
+  },
+
+  // Ícones por DML
+  _dmlConfig: {
+    "DML_COMERCIAL":  { icon: "shopping-bag", label: "Comercial",  cor: "text-purple-600 bg-purple-50 border-purple-200" },
+    "DML_OFICINA":    { icon: "wrench",       label: "Oficina",    cor: "text-orange-600 bg-orange-50 border-orange-200" },
+    "DML_INDUSTRIA":  { icon: "factory",      label: "Indústria",  cor: "text-sky-600 bg-sky-50 border-sky-200" },
+    "DML_VESTIARIO":  { icon: "shirt",        label: "Vestiário",  cor: "text-pink-600 bg-pink-50 border-pink-200" },
+    "DML_ESTOQUE":    { icon: "warehouse",    label: "Estoque",    cor: "text-amber-600 bg-amber-50 border-amber-200" },
+    "DML_CCB":        { icon: "building-2",   label: "CCB",        cor: "text-teal-600 bg-teal-50 border-teal-200" },
+  },
+
+  _renderizarAgrupadoPorDML(dados, container) {
+    // Agrupar pedidos por p.local (DML)
+    const grupos = {};
+    dados.forEach(p => {
+      const dml = p.local || "SEM_DML";
+      if (!grupos[dml]) grupos[dml] = [];
+      grupos[dml].push(p);
+    });
+
+    // Ordem fixa dos DMLs
+    const ordemDML = ["DML_COMERCIAL", "DML_OFICINA", "DML_INDUSTRIA", "DML_VESTIARIO", "DML_ESTOQUE", "DML_CCB"];
+    const chaves = [...ordemDML.filter(k => grupos[k]), ...Object.keys(grupos).filter(k => !ordemDML.includes(k))];
+
+    chaves.forEach(dml => {
+      const cfg = this._dmlConfig[dml] || { icon: "package", label: dml.replace("DML_", "").replace("_", " "), cor: "text-gray-600 bg-gray-50 border-gray-200" };
+      const pedidos = grupos[dml];
+
+      // Header da seção
+      const secao = document.createElement("div");
+      secao.className = "col-span-full";
+      secao.innerHTML = `
+        <div class="flex items-center gap-3 mb-4 mt-6 first:mt-0">
+          <div class="flex items-center gap-2.5 px-4 py-2 rounded-xl border ${cfg.cor}">
+            <i data-lucide="${cfg.icon}" class="w-4 h-4"></i>
+            <span class="text-xs font-black uppercase tracking-wider">${cfg.label}</span>
+          </div>
+          <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">${pedidos.length} pedido${pedidos.length > 1 ? 's' : ''}</span>
+          <div class="flex-1 h-px bg-gray-100"></div>
+        </div>`;
+      container.appendChild(secao);
+
+      // Cards desse grupo
+      pedidos.forEach(p => this._renderizarCardPedido(p, container));
+    });
+  },
+
+  _renderizarCardPedido(p, container) {
       const card = document.createElement("div");
-      // Card mais moderno para mobile
       const statusUpper = String(p.status || "AGUARDANDO LIDERANÇA")
         .toUpperCase()
         .normalize("NFD")
@@ -186,7 +290,7 @@ export const UI = {
 
       card.id = `card-pedido-${p.id}`;
       card.className =
-        "order-card relative rounded-[2.5rem] p-6 flex flex-col animate-entrada-suave cursor-pointer shadow-xl text-left text-zinc-900 hover:scale-[1.02] transition-transform border " +
+        "order-card relative rounded-2xl p-4 flex flex-col gap-0 animate-entrada-suave cursor-pointer shadow-lg hover:shadow-xl text-left text-zinc-900 hover:scale-[1.01] active:scale-[0.99] transition-all duration-200 border overflow-hidden " +
         cardBgClass;
       card.onclick = () => this.abrirDetalhesPedido(p);
 
@@ -206,52 +310,51 @@ export const UI = {
         : "--:--";
       const dataFormatada = p.dt.split(" ")[0];
 
+      // DML badge para cards de material (quando não está agrupado)
+      const dmlCfg = this._dmlConfig[p.local] || null;
+      const dmlBadge = (!isEPI && dmlCfg && this._categoriaAtiva !== "MATERIAL")
+        ? `<span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded ${dmlCfg.cor}">${dmlCfg.label}</span>`
+        : "";
+
       card.innerHTML = `
-                <div id="card-bar-${p.id}" class="absolute left-2 top-6 bottom-6 w-1.5 rounded-full ${cardBarClass}"></div>
-                <div class="flex justify-between items-start mb-6 text-left">
-                    <div class="relative">
-                        <img src="${urlAvatar}" class="w-14 h-14 rounded-2xl shadow-sm border-2 border-white object-cover" alt="Perfil" onerror="this.src='${fallbackAvatar}';this.onerror=null;">
-                        <div class="absolute -bottom-1 -right-1 bg-white rounded-full p-1 shadow-sm">
+                <div id="card-bar-${p.id}" class="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${cardBarClass}"></div>
+
+                <div class="flex items-center gap-4 mb-4">
+                    <div class="relative flex-shrink-0">
+                        <img src="${urlAvatar}" class="w-12 h-12 rounded-full shadow-md border-2 border-white object-cover" alt="Perfil" onerror="this.src='${fallbackAvatar}';this.onerror=null;">
+                        <div class="absolute -bottom-0.5 -right-0.5 rounded-full p-[3px] shadow-sm ${isEPI ? 'bg-blue-500' : 'bg-emerald-500'}">
                              ${
                                isEPI
-                                 ? '<i data-lucide="shield" class="w-3 h-3 text-blue-500"></i>'
-                                 : '<i data-lucide="package" class="w-3 h-3 text-emerald-500"></i>'
+                                 ? '<i data-lucide="shield" class="w-2.5 h-2.5 text-white"></i>'
+                                 : '<i data-lucide="package" class="w-2.5 h-2.5 text-white"></i>'
                              }
                         </div>
                     </div>
-                    <span class="text-[10px] font-black uppercase px-3 py-1.5 rounded-xl border ${color}">${
-        p.opc
-      }</span>
-                </div>
-                
-                <h3 class="text-lg font-black uppercase text-gray-900 mb-1 leading-tight text-left line-clamp-2">${
-                  p.nome
-                }</h3>
-                
-                <div class="flex items-center gap-2 mb-6">
-                    <span class="text-[10px] font-bold text-gray-400 bg-gray-50 px-2 py-0.5 rounded-md border border-gray-100">MAT: ${
-                      p.mat
-                    }</span>
-                    ${
-                      p.id
-                        ? `<span class="text-[10px] font-mono text-gray-400">#${p.id}</span>`
-                        : ""
-                    }
+                    <div class="flex-1 min-w-0">
+                        <h3 class="text-sm font-extrabold uppercase text-gray-900 leading-tight line-clamp-2">${p.nome}</h3>
+                        <div class="flex items-center gap-1.5 mt-1">
+                            <span class="text-[10px] font-semibold text-gray-500">MAT: ${p.mat}</span>
+                            ${p.id ? `<span class="text-[9px] text-gray-300">•</span><span class="text-[10px] font-mono text-gray-400">#${p.id}</span>` : ""}
+                            ${dmlBadge}
+                        </div>
+                    </div>
                 </div>
 
-                <div class="mt-auto pt-4 border-t border-gray-50 flex justify-between items-center">
-                    <div class="flex items-center gap-1.5 text-gray-400">
-                        <i data-lucide="clock" class="w-3 h-3"></i>
-                        <span class="text-[10px] font-bold uppercase">${dataFormatada} às ${horaFormatada}</span>
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-2">
+                        <span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-lg border ${color} tracking-wide">${p.opc}</span>
                     </div>
-                    <div class="bg-zinc-900 rounded-full p-1.5">
-                        <i data-lucide="arrow-right" class="w-3 h-3 text-white"></i>
+                    <div class="flex items-center gap-3">
+                        <div class="flex items-center gap-1 text-gray-400">
+                            <i data-lucide="clock" class="w-3 h-3"></i>
+                            <span class="text-[10px] font-medium">${horaFormatada}</span>
+                        </div>
+                        <div class="bg-zinc-900 hover:bg-zinc-700 rounded-full p-1.5 transition-colors">
+                            <i data-lucide="arrow-right" class="w-3 h-3 text-white"></i>
+                        </div>
                     </div>
                 </div>`;
       container.appendChild(card);
-    });
-
-    if (window.lucide) window.lucide.createIcons();
   },
 
   // =========================================================
@@ -263,7 +366,6 @@ export const UI = {
       p.nome
     )}&background=F40009&color=fff&bold=true&size=256`;
     const fallbackAvatar = `https://ui-avatars.com/api/?name=${encodeURIComponent(p.nome)}&background=F40009&color=fff&bold=true&size=256`;
-    // Armazena estado de aprovação por item
     if (!this._itensAprovacao) this._itensAprovacao = {};
     this._itensAprovacao[p.id] = {};
 
@@ -272,7 +374,6 @@ export const UI = {
       .map((i, idx) => {
         const raw = i.trim();
         if (!raw) return "";
-        // Detectar marcadores existentes {OK} ou {NAO}
         const temOK = raw.includes("{OK}");
         const temNAO = raw.includes("{NAO}");
         const temFalta = raw.includes("{FALTA}");
@@ -280,37 +381,32 @@ export const UI = {
         const match = limpo.match(/^(.*)\[(.+)\]\s*$/);
         const nomeItem = match ? match[1].trim() : limpo;
         const codigoItem = match ? match[2].trim() : "";
-        // Só mostrar código se for real (numérico), não gerado automaticamente (NOME-TAMANHO)
         const codigoFinal = (codigoItem && /^\d+$/.test(codigoItem)) ? codigoItem : "";
         const codigoSafe = codigoFinal.replace(/'/g, "\\'");
 
-        // Definir estado inicial
         if (temOK) this._itensAprovacao[p.id][idx] = true;
         else if (temNAO) this._itensAprovacao[p.id][idx] = false;
         else if (temFalta) this._itensAprovacao[p.id][idx] = "falta";
 
-        const estadoClass = temOK ? "border-emerald-200 bg-emerald-50" : temNAO ? "border-red-200 bg-red-50" : temFalta ? "border-amber-200 bg-amber-50" : "border-gray-100";
-        const barClass = temOK ? "bg-emerald-500" : temNAO ? "bg-red-400" : temFalta ? "bg-amber-400" : "bg-red-500";
+        const estadoClass = temOK ? "border-emerald-200 bg-emerald-50/50" : temNAO ? "border-red-200 bg-red-50/50" : temFalta ? "border-amber-200 bg-amber-50/50" : "border-[#e5e7eb] bg-white";
 
-        return `<div id="item-aprov-${p.id}-${idx}" class="flex items-center gap-3 p-3 rounded-xl border shadow-sm mb-2 ${estadoClass} transition-all">
-                <div class="w-2 h-full ${barClass} rounded-full flex-shrink-0 self-stretch"></div>
+        return `<div id="item-aprov-${p.id}-${idx}" class="flex items-center gap-3 px-4 py-3 rounded-2xl border ${estadoClass} transition-all">
                 <div class="flex-1 min-w-0">
-                  <span class="text-sm font-bold uppercase text-zinc-800 break-words leading-snug">${nomeItem}</span>
-                  ${
-                    codigoFinal
-                      ? `<button onclick="UI.copiarCodigo('${codigoSafe}')" class="mt-1 text-[10px] font-black uppercase tracking-widest text-red-600 bg-red-50 border border-red-100 px-2 py-1 rounded-lg inline-flex items-center gap-1 hover:bg-red-100 transition-colors">COD: ${codigoFinal}<i data-lucide="copy" class="w-3 h-3"></i></button>`
-                      : ""
+                  <span class="text-[13px] font-bold uppercase text-[#111827] break-words leading-snug">${nomeItem}</span>
+                  ${codigoFinal
+                    ? `<button onclick="UI.copiarCodigo('${codigoSafe}')" class="mt-1.5 text-[10px] font-bold text-[#9ca3af] bg-[#f3f4f6] border border-[#e5e7eb] px-2.5 py-1 rounded-xl inline-flex items-center gap-1.5 hover:border-[#f40009] hover:text-[#f40009] transition-colors cursor-pointer">COD: ${codigoFinal} <i data-lucide="copy" class="w-3 h-3"></i></button>`
+                    : ""
                   }
                 </div>
-                <div class="flex gap-1 flex-shrink-0">
-                  <button onclick="UI.toggleItemAprovacao('${p.id}', ${idx}, true)" id="btn-ok-${p.id}-${idx}" class="w-9 h-9 rounded-full flex items-center justify-center transition-all ${temOK ? 'bg-emerald-500 text-white shadow-md scale-110' : 'bg-gray-100 text-gray-400 hover:bg-emerald-100 hover:text-emerald-600'}">
-                    <i data-lucide="check" class="w-4 h-4"></i>
+                <div class="flex gap-1.5 flex-shrink-0">
+                  <button onclick="UI.toggleItemAprovacao('${p.id}', ${idx}, true)" id="btn-ok-${p.id}-${idx}" class="w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${temOK ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-[#f9fafb] text-[#9ca3af] border-[#e5e7eb] hover:border-emerald-300 hover:text-emerald-500'}">
+                    <i data-lucide="check" class="w-3.5 h-3.5"></i>
                   </button>
-                  <button onclick="UI.toggleItemAprovacao('${p.id}', ${idx}, 'falta')" id="btn-falta-${p.id}-${idx}" class="w-9 h-9 rounded-full flex items-center justify-center transition-all ${temFalta ? 'bg-amber-500 text-white shadow-md scale-110' : 'bg-gray-100 text-gray-400 hover:bg-amber-100 hover:text-amber-600'}">
-                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                  <button onclick="UI.toggleItemAprovacao('${p.id}', ${idx}, 'falta')" id="btn-falta-${p.id}-${idx}" class="w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${temFalta ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-[#f9fafb] text-[#9ca3af] border-[#e5e7eb] hover:border-amber-300 hover:text-amber-500'}">
+                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
                   </button>
-                  <button onclick="UI.toggleItemAprovacao('${p.id}', ${idx}, false)" id="btn-nao-${p.id}-${idx}" class="w-9 h-9 rounded-full flex items-center justify-center transition-all ${temNAO ? 'bg-red-500 text-white shadow-md scale-110' : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'}">
-                    <i data-lucide="x" class="w-4 h-4"></i>
+                  <button onclick="UI.toggleItemAprovacao('${p.id}', ${idx}, false)" id="btn-nao-${p.id}-${idx}" class="w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${temNAO ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-[#f9fafb] text-[#9ca3af] border-[#e5e7eb] hover:border-red-300 hover:text-red-500'}">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
                   </button>
                 </div>
             </div>`;
@@ -323,173 +419,167 @@ export const UI = {
       statusAtual = "EM ANÁLISE";
       p.status = "EM ANÁLISE";
     }
-    
-    const statusLower = statusAtual.toUpperCase();
-    const statusKey = statusLower
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "");
-    const isReprovada =
-      statusKey.includes("NAO APROV") ||
-      statusKey.includes("ERRO") ||
-      statusKey.includes("FALTA");
-    const isAprovada =
-      (statusKey.includes("APROVADA") || statusKey.includes("BAIXADA")) &&
-      !isReprovada;
-    const isAmarelo =
-      statusKey.includes("ANALISE") || statusKey.includes("AGUARDANDO");
-    const sapValue =
-      (statusKey.includes("APROVADA") || statusKey.includes("BAIXADA")) &&
-      p.sap &&
-      p.sap !== "NÃO APROVADA"
-        ? p.sap
-        : "";
-    const statusPainelClass = isAprovada
-      ? "bg-emerald-50 border-emerald-200"
-      : isReprovada
-      ? "bg-red-50 border-red-200"
-      : isAmarelo
-      ? "bg-amber-50 border-amber-200"
-      : "bg-gray-50 border-gray-200";
-    const statusBarClass = isAprovada
-      ? "bg-emerald-400"
-      : isReprovada
-      ? "bg-red-400"
-      : isAmarelo
-      ? "bg-amber-300"
-      : "bg-blue-500";
-    const statusTextClass = isAprovada
-      ? "text-emerald-600"
-      : isReprovada
-      ? "text-red-600"
-      : isAmarelo
-      ? "text-amber-600"
-      : "text-blue-500";
-    const popupBgClass = isAprovada
-      ? "bg-emerald-50"
-      : isReprovada
-      ? "bg-red-50"
-      : isAmarelo
-      ? "bg-amber-50"
-      : "bg-gray-50";
-    const popupHeaderClass = isAprovada
-      ? "bg-emerald-50"
-      : isReprovada
-      ? "bg-red-50"
-      : isAmarelo
-      ? "bg-amber-50"
-      : "bg-white";
-    const swalBgColor = isAprovada
-      ? "#ecfdf5"
-      : isReprovada
-      ? "#fef2f2"
-      : isAmarelo
-      ? "#fffbeb"
-      : "#ffffff";
-    // Popup responsivo que ocupa quase toda a tela no celular
-    const larguraPopup = window.innerWidth < 768 ? "95%" : "600px";
 
-    // Dados para exportação - armazena no objeto UI
+    const statusKey = statusAtual.toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const isReprovada = statusKey.includes("NAO APROV") || statusKey.includes("ERRO") || statusKey.includes("FALTA");
+    const isAprovada = (statusKey.includes("APROVADA") || statusKey.includes("BAIXADA")) && !isReprovada;
+    const isAmarelo = statusKey.includes("ANALISE") || statusKey.includes("AGUARDANDO");
+    const sapValue = (statusKey.includes("APROVADA") || statusKey.includes("BAIXADA")) && p.sap && p.sap !== "NÃO APROVADA" ? p.sap : "";
+
+    // Cores sutis — só um detalhe, não o fundo inteiro
+    const statusDotClass = isAprovada ? "bg-emerald-500" : isReprovada ? "bg-red-500" : isAmarelo ? "bg-amber-400" : "bg-blue-400";
+    const statusPainelClass = isAprovada ? "bg-emerald-50 border-emerald-200" : isReprovada ? "bg-red-50 border-red-200" : isAmarelo ? "bg-amber-50 border-amber-200" : "bg-gray-50 border-gray-200";
+    const statusBarClass = isAprovada ? "bg-emerald-400" : isReprovada ? "bg-red-400" : isAmarelo ? "bg-amber-300" : "bg-blue-500";
+    const statusTextClass = isAprovada ? "text-emerald-600" : isReprovada ? "text-red-600" : isAmarelo ? "text-amber-600" : "text-blue-500";
+
+    const larguraPopup = window.innerWidth < 768 ? "95%" : "520px";
     this._pedidoExport = { nome: p.nome, mat: p.mat, equ: p.equ, opc: p.opc, id: p.id, dt: p.dt, its: p.its, status: statusAtual, local: p.local || "" };
 
+    const isEpiPopup = p.opc.toUpperCase().includes("EPI") || p.opc.toUpperCase().includes("UNIFORME");
+    const localLabel = p.local ? p.local.replace('DML_', '').replace('_', ' ') : '';
+    const localSafe = localLabel.replace(/'/g, "\\'");
+    const dmlPopupCfg = this._dmlConfig[p.local] || null;
+    const numItens = p.its.split("|").filter(i => i.trim()).length;
+    const horaPopup = p.dt.includes(" ") ? p.dt.split(" ")[1].substring(0, 5) : "--:--";
+    const dataPopup = p.dt.split(" ")[0];
+
     Swal.fire({
-      background: swalBgColor,
-      color: "#000",
+      background: "#ffffff",
+      color: "#111827",
       padding: "0",
       showConfirmButton: false,
       showCloseButton: true,
       width: larguraPopup,
       html: `
-                <div id="popupPedidoContainer" class="text-left overflow-hidden ${popupBgClass} text-zinc-900 rounded-[2rem]">
-                    <!-- Cabeçalho Imersivo -->
-                    <div id="popupPedidoHeader" class="p-6 ${popupHeaderClass} rounded-b-[2.5rem] shadow-sm z-10 relative">
-                        <div class="flex items-center gap-4 mb-4">
-                            <img src="${urlAvatar}" class="w-16 h-16 rounded-2xl border-4 border-gray-50 shadow-lg object-cover" alt="Foto" onerror="this.src='${fallbackAvatar}';this.onerror=null;">
+                <div id="popupPedidoContainer" class="text-left overflow-hidden text-[#111827]">
+                    <!-- Header limpo -->
+                    <div id="popupPedidoHeader" class="p-6 pb-5 border-b border-[#e5e7eb]">
+                        <div class="flex items-center gap-4">
+                            <img src="${urlAvatar}" class="w-14 h-14 rounded-[18px] border-2 border-[#e5e7eb] object-cover" style="box-shadow: 0 4px 10px rgba(0,0,0,0.1);" alt="Foto" onerror="this.src='${fallbackAvatar}';this.onerror=null;">
                             <div class="flex-1 min-w-0">
-                                <h2 class="text-xl font-black uppercase italic leading-none mb-1 text-zinc-900 truncate">${
-                                  p.nome
-                                }</h2>
-                                <div class="flex items-center gap-2">
-                                    <span class="text-[10px] font-black bg-gray-100 text-gray-500 px-2 py-0.5 rounded-lg border border-gray-200">#${
-                                      p.id || "N/A"
-                                    }</span>
-                                    <span class="text-[10px] font-bold text-gray-400 uppercase tracking-wide truncate">${
-                                      p.opc
-                                    }</span>
+                                <h2 class="text-[15px] font-black uppercase leading-tight text-[#111827]" style="font-family:'Inter',sans-serif;">${p.nome}</h2>
+                                <div class="flex items-center gap-2 mt-1.5">
+                                    <span class="w-2 h-2 rounded-full ${statusDotClass} flex-shrink-0"></span>
+                                    <span class="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide">${statusAtual}</span>
                                 </div>
                             </div>
-                            <button onclick="UI.exportarPedido(UI._pedidoExport)" class="w-10 h-10 bg-white/80 border border-zinc-200 rounded-xl flex items-center justify-center text-zinc-500 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-all flex-shrink-0 active:scale-90" title="Exportar para WhatsApp">
-                                <i data-lucide="share-2" class="w-4.5 h-4.5"></i>
+                            <button onclick="${isEpiPopup ? "UI.toggleSecaoPopup('secaoPreview');document.getElementById('secaoPreview')?.scrollIntoView({behavior:'smooth',block:'center'})" : "UI.exportarPedido(UI._pedidoExport)"}" class="w-10 h-10 bg-[#f9fafb] border border-[#e5e7eb] rounded-2xl flex items-center justify-center text-[#9ca3af] hover:border-[#f40009] hover:text-[#f40009] transition-all flex-shrink-0 active:scale-95 cursor-pointer" title="Compartilhar">
+                                <i data-lucide="share-2" class="w-4 h-4"></i>
                             </button>
                         </div>
-                        
-                        <div class="grid grid-cols-${p.local ? '3' : '2'} gap-3 mt-2">
-                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group" onclick="UI.copiarCodigo('${p.mat}')" title="Copiar matrícula">
-                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1">Matrícula <i data-lucide="copy" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                                <p class="text-base font-black text-zinc-900">${
-                                  p.mat
-                                }</p>
+
+                        <!-- Dados em linha -->
+                        <div class="flex flex-wrap gap-2 mt-4">
+                            <div class="bg-[#f3f4f6] px-3 py-1.5 rounded-xl cursor-pointer hover:bg-[#e5e7eb] transition-colors group flex items-center gap-1.5" onclick="UI.copiarCodigo('${p.mat}')" title="Copiar">
+                                <span class="text-[10px] font-bold text-[#9ca3af] uppercase">Mat</span>
+                                <span class="text-[11px] font-black text-[#111827]">${p.mat}</span>
+                                <i data-lucide="copy" class="w-3 h-3 text-[#9ca3af] opacity-0 group-hover:opacity-100 transition-opacity"></i>
                             </div>
-                            <div class="bg-gray-50 p-3 rounded-xl border border-gray-100">
-                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5">Equipe</p>
-                                <p class="text-base font-black text-zinc-900 truncate">${
-                                  p.equ
-                                }</p>
+                            <div class="bg-[#f3f4f6] px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold text-[#9ca3af] uppercase">Equipe</span>
+                                <span class="text-[11px] font-black text-[#111827]">${p.equ}</span>
                             </div>
-                            ${p.local ? `<div class="bg-gray-50 p-3 rounded-xl border border-gray-100 cursor-pointer hover:bg-gray-100 transition-colors group" onclick="UI.copiarCodigo('${p.local.replace('DML_', '').replace('_', ' ')}')" title="Copiar local">
-                                <p class="text-[9px] font-bold text-gray-400 uppercase mb-0.5 flex items-center gap-1">Local <i data-lucide="copy" class="w-3 h-3 opacity-0 group-hover:opacity-100 transition-opacity"></i></p>
-                                <p class="text-sm font-black text-zinc-900 truncate">${
-                                  p.local.replace('DML_', '').replace('_', ' ')
-                                }</p>
+                            ${p.local ? `<div class="bg-[#f3f4f6] px-3 py-1.5 rounded-xl cursor-pointer hover:bg-[#e5e7eb] transition-colors group flex items-center gap-1.5" onclick="UI.copiarCodigo('${localSafe}')" title="Copiar">
+                                <span class="text-[10px] font-bold text-[#9ca3af] uppercase">Local</span>
+                                <span class="text-[11px] font-black text-[#111827]">${localLabel}</span>
+                                <i data-lucide="copy" class="w-3 h-3 text-[#9ca3af] opacity-0 group-hover:opacity-100 transition-opacity"></i>
                             </div>` : ''}
+                            <div class="bg-[#f3f4f6] px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                                <span class="text-[10px] font-bold text-[#9ca3af] uppercase">ID</span>
+                                <span class="text-[11px] font-black text-[#111827]">#${p.id || "N/A"}</span>
+                            </div>
+                            <div class="bg-[#f3f4f6] px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                                <i data-lucide="clock" class="w-3 h-3 text-[#9ca3af]"></i>
+                                <span class="text-[10px] font-bold text-[#9ca3af]">${dataPopup} ${horaPopup}</span>
+                            </div>
                         </div>
                     </div>
 
-                    <div class="p-6 space-y-6">
-                        <!-- Seletor de Status (Estilo Cartão) -->
-                        <div id="popupStatusCard" class="p-4 rounded-2xl border shadow-sm relative overflow-hidden ${statusPainelClass}">
-                            <div id="popupStatusBar" class="absolute top-0 left-0 w-1.5 h-full ${statusBarClass}"></div>
-                            <p id="popupStatusTitle" class="text-[10px] font-black uppercase tracking-widest mb-2 pl-2 ${statusTextClass}">Status do Pedido</p>
-                            <div class="relative">
-                                <select id="selectStatusAdmin" onchange="UI.handleStatusChange('${p.id}')" class="w-full bg-white/70 border border-zinc-200 text-zinc-900 text-sm font-bold rounded-xl p-3 pl-4 outline-none focus:ring-2 focus:ring-red-200 transition-all appearance-none cursor-pointer uppercase" ${statusAtual === "APROVADA" || statusAtual === "NÃO APROVADA" ? "disabled" : ""}>
-                                    <option value="EM ANÁLISE" ${
-                                      statusAtual === "EM ANÁLISE" || statusAtual === "AGUARDANDO LIDERANÇA"
-                                        ? "selected"
-                                        : ""
-                                    }>⏳ Em Análise</option>
-                                    <option value="APROVADA" ${
-                                      statusAtual === "APROVADA" || statusAtual === "RESERVA APROVADA" || statusAtual === "RESERVA BAIXADA"
-                                        ? "selected"
-                                        : ""
-                                    }>✅ Aprovada</option>
-                                    <option value="NÃO APROVADA" ${
-                                      statusAtual === "NÃO APROVADA"
-                                        ? "selected"
-                                        : ""
-                                    }>🚫 Não Aprovada</option>
+                    <!-- Corpo -->
+                    <div class="p-6 space-y-5">
+                        <!-- Status -->
+                        <div id="popupStatusCard" class="p-4 rounded-2xl border relative overflow-hidden ${statusPainelClass}">
+                            <div id="popupStatusBar" class="absolute top-0 left-0 w-1 h-full rounded-l-2xl ${statusBarClass}"></div>
+                            <p id="popupStatusTitle" class="text-[9px] font-black uppercase tracking-[0.15em] mb-2 pl-3 ${statusTextClass}">Status</p>
+                            <div class="relative pl-2">
+                                <select id="selectStatusAdmin" onchange="UI.handleStatusChange('${p.id}')" class="w-full bg-white border border-[#e5e7eb] text-[#111827] text-sm font-bold rounded-xl p-3 pl-4 outline-none focus:border-[#f40009] transition-all appearance-none cursor-pointer uppercase" ${statusAtual === "APROVADA" || statusAtual === "NÃO APROVADA" ? "disabled" : ""}>
+                                    <option value="EM ANÁLISE" ${statusAtual === "EM ANÁLISE" || statusAtual === "AGUARDANDO LIDERANÇA" ? "selected" : ""}>Em Análise</option>
+                                    <option value="APROVADA" ${statusAtual === "APROVADA" || statusAtual === "RESERVA APROVADA" || statusAtual === "RESERVA BAIXADA" ? "selected" : ""}>Aprovada</option>
+                                    <option value="NÃO APROVADA" ${statusAtual === "NÃO APROVADA" ? "selected" : ""}>Não Aprovada</option>
                                 </select>
-                                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-zinc-400">
+                                <div class="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none text-[#9ca3af]">
                                     <i data-lucide="chevron-down" class="w-4 h-4"></i>
                                 </div>
                             </div>
-                            <p id="msgStatus" class="text-[9px] text-zinc-400 mt-1 pl-2 h-3 transition-all font-bold"></p>
+                            <p id="msgStatus" class="text-[8px] text-[#9ca3af] mt-1 pl-3 h-3 transition-all font-bold"></p>
                         </div>
 
-                        <div class="bg-white p-4 rounded-2xl border border-gray-100 shadow-sm">
-                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-2">Código SAP (Retirada)</p>
-                            <input id="inputSapCodigo" type="text" value="${sapValue}" placeholder="Informe o código do SAP" class="w-full bg-gray-50 border border-gray-200 text-gray-900 text-sm font-bold rounded-xl p-3 outline-none focus:ring-2 focus:ring-red-200 transition-all uppercase" oninput="UI.atualizarBotaoAprovacao()">
-                            <p class="text-[9px] text-gray-400 mt-2">Para aprovar, informe o código SAP e clique em concluir.</p>
-                            <button id="btnConcluirAprovacao" onclick="UI.concluirAprovacao('${p.id}')" class="mt-3 w-full bg-[#F40009] text-white py-3 rounded-xl font-black uppercase tracking-widest shadow-lg hover:bg-[#d10008] active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>Concluir Aprovação</button>
+                        <!-- SAP (só visível quando APROVADA) -->
+                        <div id="secaoSAP" class="bg-white p-4 rounded-2xl border border-[#e5e7eb] transition-all" style="display:none;">
+                            <p class="text-[9px] font-black text-[#9ca3af] uppercase tracking-[0.15em] mb-2">Código SAP (Retirada)</p>
+                            <input id="inputSapCodigo" type="text" value="${sapValue}" placeholder="Informe o código do SAP" class="w-full bg-[#f9fafb] border border-[#e5e7eb] text-[#111827] text-sm font-bold rounded-xl p-3 outline-none focus:border-[#f40009] transition-all uppercase">
+                            <p class="text-[8px] text-[#9ca3af] mt-2">Obrigatório para aprovar a solicitação.</p>
                         </div>
 
-                        <!-- Lista de Itens -->
+                        <!-- Itens (botões de ação só quando APROVADA) -->
                         <div>
-                            <p class="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-3 ml-1">Itens Solicitados</p>
+                            <div class="flex items-center justify-between mb-3">
+                                <p class="text-[9px] font-black text-[#9ca3af] uppercase tracking-[0.15em]">Itens Solicitados</p>
+                                <span class="text-[9px] font-bold text-[#9ca3af] bg-[#f3f4f6] px-2.5 py-1 rounded-xl">${numItens} ${numItens === 1 ? 'item' : 'itens'}</span>
+                            </div>
                             <div class="space-y-2">${itensHtml}</div>
                         </div>
 
-                        <button onclick="Sistema.notificarWhatsApp('${p.nome}', '${
-        p.mat
-      }')" class="w-full bg-green-500 hover:bg-green-600 text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg shadow-green-200 active:scale-95 transition-all border-none cursor-pointer flex items-center justify-center gap-2">
+                        <!-- Botão Concluir (só quando APROVADA ou NÃO APROVADA) -->
+                        <div id="secaoConcluir" style="display:none;">
+                            <button id="btnConcluirAprovacao" onclick="UI.concluirAprovacao('${p.id}')" class="w-full py-3 rounded-xl font-black uppercase text-[11px] tracking-[0.15em] active:scale-[0.98] transition-all disabled:opacity-30 disabled:cursor-not-allowed border-none cursor-pointer" style="background:linear-gradient(135deg,#f40009 0%,#900005 100%);color:#fff;box-shadow:0 4px 15px rgba(244,0,9,0.3);" disabled>Concluir Aprovação</button>
+                        </div>
+
+                        ${isEpiPopup ? `
+                        <!-- Compartilhar com Gestores (só EPI/Uniforme) -->
+                        <div class="border border-[#e5e7eb] rounded-2xl overflow-hidden">
+                            <button onclick="UI.toggleSecaoPopup('secaoPreview')" class="w-full flex items-center justify-between px-4 py-3 bg-[#f9fafb] hover:bg-[#f3f4f6] transition-colors cursor-pointer border-none text-left">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="share-2" class="w-4 h-4 text-[#f40009]"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-[0.1em] text-[#111827]">Compartilhar com Gestores</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-[#9ca3af] transition-transform" id="iconPreview"></i>
+                            </button>
+                            <div id="secaoPreview" class="hidden px-4 pb-4 pt-2">
+                                <p class="text-[9px] text-[#9ca3af] font-bold mb-3">Pré-visualização da imagem para enviar no grupo</p>
+                                <div id="previewContainer" class="flex justify-center mb-3">
+                                    <div class="w-8 h-8 border-2 border-[#e5e7eb] border-t-[#f40009] rounded-full animate-spin"></div>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="UI.exportarPedido(UI._pedidoExport)" class="flex-1 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider bg-[#f3f4f6] text-[#111827] border border-[#e5e7eb] hover:border-[#f40009] hover:text-[#f40009] transition-all cursor-pointer flex items-center justify-center gap-2">
+                                        <i data-lucide="image" class="w-3.5 h-3.5"></i> Gerar Imagem
+                                    </button>
+                                    <button onclick="UI.copiarImagemExport()" id="btnCopiarInline" class="flex-1 py-2.5 rounded-xl font-black uppercase text-[10px] tracking-wider bg-[#25D366] text-white border-none hover:bg-[#20bd5a] transition-all cursor-pointer flex items-center justify-center gap-2" style="box-shadow:0 2px 8px rgba(37,211,102,0.2);">
+                                        <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copiar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Histórico EPI/Uniforme do Colaborador (aberto por padrão) -->
+                        <div class="border border-[#e5e7eb] rounded-2xl overflow-hidden">
+                            <div class="flex items-center justify-between px-4 py-3 bg-[#f9fafb] border-b border-[#e5e7eb]">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="history" class="w-4 h-4 text-blue-500"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-[0.1em] text-[#111827]">Histórico de Solicitações</span>
+                                </div>
+                                <span id="contHistorico" class="text-[9px] font-bold text-[#9ca3af] bg-white px-2.5 py-0.5 rounded-lg border border-[#e5e7eb]"></span>
+                            </div>
+                            <div id="tabelaHistorico" class="px-4 pb-4 pt-2">
+                                <div class="flex justify-center py-4">
+                                    <div class="w-6 h-6 border-2 border-[#e5e7eb] border-t-blue-500 rounded-full animate-spin"></div>
+                                </div>
+                            </div>
+                        </div>
+                        ` : ''}
+
+                        <!-- WhatsApp -->
+                        <button onclick="Sistema.notificarWhatsApp('${p.nome}', '${p.mat}')" class="w-full bg-[#25D366] hover:bg-[#20bd5a] text-white py-3.5 rounded-2xl font-black uppercase text-[10px] tracking-[0.15em] active:scale-[0.98] transition-all border-none cursor-pointer flex items-center justify-center gap-2" style="box-shadow:0 4px 15px rgba(37,211,102,0.3);">
                             <i data-lucide="message-circle" class="w-4 h-4"></i>
                             Avisar no WhatsApp
                         </button>
@@ -498,24 +588,42 @@ export const UI = {
       didOpen: () => {
         window.lucide.createIcons();
         const inputSap = document.getElementById("inputSapCodigo");
-        if (
-          inputSap &&
-          (statusAtual === "APROVADA" || statusAtual === "NÃO APROVADA" ||
-           statusAtual === "RESERVA APROVADA" || statusAtual === "RESERVA BAIXADA")
-        ) {
+        if (inputSap) inputSap.addEventListener("input", () => UI.atualizarBotaoAprovacao());
+
+        const isLocked = statusAtual === "APROVADA" || statusAtual === "NÃO APROVADA" ||
+           statusAtual === "RESERVA APROVADA" || statusAtual === "RESERVA BAIXADA";
+
+        if (inputSap && isLocked) {
           inputSap.dataset.locked = "true";
         }
-        this.atualizarBotaoAprovacao();
-        this.atualizarSapLock();
-        this.atualizarCoresPopupStatus(statusAtual);
-        // Bloquear botões de itens se já está aprovado/não aprovado
-        if (statusAtual === "APROVADA" || statusAtual === "NÃO APROVADA" ||
-            statusAtual === "RESERVA APROVADA" || statusAtual === "RESERVA BAIXADA") {
+
+        // Aplicar visibilidade inicial das seções
+        this._atualizarVisibilidadeSecoes(statusAtual);
+
+        // Se já finalizado, bloquear tudo e mostrar seções como readonly
+        if (isLocked) {
+          const secaoSAP = document.getElementById("secaoSAP");
+          const secaoConcluir = document.getElementById("secaoConcluir");
+          // Mostrar SAP se aprovada (com valor), esconder se reprovada
+          if (statusAtual === "APROVADA" || statusAtual === "RESERVA APROVADA" || statusAtual === "RESERVA BAIXADA") {
+            if (secaoSAP) secaoSAP.style.display = "block";
+          }
+          if (secaoConcluir) secaoConcluir.style.display = "block";
           document.querySelectorAll('[id^="btn-ok-"], [id^="btn-nao-"], [id^="btn-falta-"]').forEach(btn => {
             btn.disabled = true;
             btn.style.pointerEvents = "none";
-            btn.style.opacity = "0.5";
+            btn.style.opacity = "0.4";
+            btn.style.display = "flex";
           });
+        }
+
+        this.atualizarBotaoAprovacao();
+        this.atualizarSapLock();
+        this.atualizarCoresPopupStatus(statusAtual);
+
+        // Carregar histórico automaticamente para EPI/Uniforme
+        if (document.getElementById("tabelaHistorico")) {
+          this._carregarHistoricoEPI();
         }
       },
       customClass: { popup: "swal2-popup-custom" },
@@ -901,7 +1009,9 @@ export const UI = {
   handleStatusChange(id) {
     const select = document.getElementById("selectStatusAdmin");
     const status = select ? select.value : "";
-    const sap = document.getElementById("inputSapCodigo")?.value || "";
+
+    // Mostrar/esconder seções baseado no status
+    this._atualizarVisibilidadeSecoes(status);
 
     // Auto-marcar todos os itens baseado no status
     if (this._itensAprovacao && this._itensAprovacao[id]) {
@@ -927,10 +1037,41 @@ export const UI = {
       }
     }
 
-    // Status só é salvo ao clicar "Concluir Aprovação"
     this.atualizarBotaoAprovacao();
     this.atualizarSapLock();
     this.atualizarCoresPopupStatus(status);
+  },
+
+  _atualizarVisibilidadeSecoes(status) {
+    const secaoSAP = document.getElementById("secaoSAP");
+    const secaoConcluir = document.getElementById("secaoConcluir");
+    const botoesItens = document.querySelectorAll('[id^="btn-ok-"], [id^="btn-nao-"], [id^="btn-falta-"]');
+
+    if (status === "APROVADA") {
+      // Mostra SAP, botão concluir e botões de item
+      if (secaoSAP) secaoSAP.style.display = "block";
+      if (secaoConcluir) secaoConcluir.style.display = "block";
+      botoesItens.forEach(btn => {
+        btn.style.display = "flex";
+        btn.disabled = false;
+        btn.style.pointerEvents = "auto";
+        btn.style.opacity = "1";
+      });
+    } else if (status === "NÃO APROVADA") {
+      // Esconde SAP, mostra botão concluir, esconde botões de item
+      if (secaoSAP) secaoSAP.style.display = "none";
+      if (secaoConcluir) secaoConcluir.style.display = "block";
+      botoesItens.forEach(btn => {
+        btn.style.display = "none";
+      });
+    } else {
+      // EM ANÁLISE: esconde tudo
+      if (secaoSAP) secaoSAP.style.display = "none";
+      if (secaoConcluir) secaoConcluir.style.display = "none";
+      botoesItens.forEach(btn => {
+        btn.style.display = "none";
+      });
+    }
   },
 
   _atualizarVisualItem(pedidoId, idx) {
@@ -946,9 +1087,9 @@ export const UI = {
       else if (estado === "falta") container.classList.add("border-amber-200", "bg-amber-50");
       else container.classList.add("border-gray-100", "bg-white");
     }
-    if (btnOk) btnOk.className = `w-9 h-9 rounded-full flex items-center justify-center transition-all ${estado === true ? 'bg-emerald-500 text-white shadow-md scale-110' : 'bg-gray-100 text-gray-400 hover:bg-emerald-100 hover:text-emerald-600'}`;
-    if (btnNao) btnNao.className = `w-9 h-9 rounded-full flex items-center justify-center transition-all ${estado === false ? 'bg-red-500 text-white shadow-md scale-110' : 'bg-gray-100 text-gray-400 hover:bg-red-100 hover:text-red-600'}`;
-    if (btnFalta) btnFalta.className = `w-9 h-9 rounded-full flex items-center justify-center transition-all ${estado === "falta" ? 'bg-amber-500 text-white shadow-md scale-110' : 'bg-gray-100 text-gray-400 hover:bg-amber-100 hover:text-amber-600'}`;
+    if (btnOk) btnOk.className = `w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${estado === true ? 'bg-emerald-500 text-white border-emerald-500 shadow-sm' : 'bg-[#f9fafb] text-[#9ca3af] border-[#e5e7eb] hover:border-emerald-300 hover:text-emerald-500'}`;
+    if (btnNao) btnNao.className = `w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${estado === false ? 'bg-red-500 text-white border-red-500 shadow-sm' : 'bg-[#f9fafb] text-[#9ca3af] border-[#e5e7eb] hover:border-red-300 hover:text-red-500'}`;
+    if (btnFalta) btnFalta.className = `w-8 h-8 rounded-xl flex items-center justify-center transition-all border ${estado === "falta" ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-[#f9fafb] text-[#9ca3af] border-[#e5e7eb] hover:border-amber-300 hover:text-amber-500'}`;
     if (window.lucide) window.lucide.createIcons();
   },
 
@@ -959,9 +1100,36 @@ export const UI = {
     const sap = document.getElementById("inputSapCodigo")?.value || "";
     const locked = document.getElementById("inputSapCodigo")?.dataset.locked === "true";
     const selectDisabled = document.getElementById("selectStatusAdmin")?.disabled;
-    const ok = (status === "APROVADA" && sap.trim().length > 0) || status === "NÃO APROVADA";
-    btn.disabled = locked || selectDisabled || !ok;
-    btn.innerText = (locked || selectDisabled) ? "Concluído" : "Concluir Aprovação";
+
+    if (locked || selectDisabled) {
+      btn.disabled = true;
+      btn.innerText = "Concluído";
+      btn.style.background = "#e5e7eb";
+      btn.style.color = "#9ca3af";
+      btn.style.boxShadow = "none";
+      return;
+    }
+
+    if (status === "APROVADA") {
+      const ok = sap.trim().length > 0;
+      btn.disabled = !ok;
+      btn.innerText = ok ? "Concluir Aprovação" : "Informe o SAP para concluir";
+      btn.style.background = ok ? "linear-gradient(135deg,#f40009 0%,#900005 100%)" : "#e5e7eb";
+      btn.style.color = ok ? "#fff" : "#9ca3af";
+      btn.style.boxShadow = ok ? "0 4px 15px rgba(244,0,9,0.3)" : "none";
+    } else if (status === "NÃO APROVADA") {
+      btn.disabled = false;
+      btn.innerText = "Confirmar Recusa";
+      btn.style.background = "#ef4444";
+      btn.style.color = "#fff";
+      btn.style.boxShadow = "0 4px 15px rgba(239,68,68,0.3)";
+    } else {
+      btn.disabled = true;
+      btn.innerText = "Selecione um status";
+      btn.style.background = "#e5e7eb";
+      btn.style.color = "#9ca3af";
+      btn.style.boxShadow = "none";
+    }
   },
 
   toggleItemAprovacao(pedidoId, idx, valor) {
@@ -988,6 +1156,211 @@ export const UI = {
       if (estado === "falta") return `${limpo} {FALTA}`;
       return limpo;
     }).filter(Boolean).join(" | ");
+  },
+
+  toggleSecaoPopup(secaoId) {
+    const secao = document.getElementById(secaoId);
+    if (!secao) return;
+    const isHidden = secao.classList.contains("hidden");
+    secao.classList.toggle("hidden");
+    // Rotacionar ícone
+    const iconId = secaoId === "secaoPreview" ? "iconPreview" : "iconHistorico";
+    const icon = document.getElementById(iconId);
+    if (icon) icon.style.transform = isHidden ? "rotate(180deg)" : "";
+
+    // Carregar histórico ao abrir pela primeira vez
+    if (secaoId === "secaoHistorico" && isHidden) {
+      this._carregarHistoricoEPI();
+    }
+    // Gerar preview ao abrir pela primeira vez
+    if (secaoId === "secaoPreview" && isHidden) {
+      this._gerarPreviewInline();
+    }
+  },
+
+  _gerarPreviewInline() {
+    const container = document.getElementById("previewContainer");
+    if (!container || !this._pedidoExport) return;
+    const p = this._pedidoExport;
+
+    const colabMatch = (State.colaboradores || []).find(c => String(c.matricula).trim() === String(p.mat).trim());
+    const avatarUrl = (colabMatch && colabMatch.imagem) ? colabMatch.imagem : "";
+    const avatarHTML = avatarUrl
+      ? `<img src="${avatarUrl}" crossorigin="anonymous" style="width:48px;height:48px;border-radius:14px;object-fit:cover;border:2px solid rgba(255,255,255,0.3);">`
+      : `<div style="width:48px;height:48px;border-radius:14px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:20px;border:2px solid rgba(255,255,255,0.3);">${(p.nome || "?")[0]}</div>`;
+
+    const itens = p.its.split("|").map(i => i.trim().replace(/\s*\{(OK|NAO|FALTA)\}\s*/g, "").replace(/\s*\[.*?\]\s*/g, "").trim()).filter(Boolean);
+    const itensHTML = itens.map(item =>
+      `<div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#fafafa;border:1px solid #e5e7eb;border-radius:10px;margin-bottom:6px;">
+        <div style="width:6px;height:6px;border-radius:50%;background:#F40009;flex-shrink:0;"></div>
+        <span style="font-size:11px;font-weight:700;color:#111827;text-transform:uppercase;">${item}</span>
+      </div>`
+    ).join("");
+
+    // Buscar histórico de entregas aprovadas ({OK}) para incluir na imagem
+    const matAtual = String(p.mat).trim();
+    const historicoAprovado = (State.pedidos || []).filter(h => {
+      const mesmoColab = String(h.mat).trim() === matAtual;
+      const ehEpi = h.opc && (h.opc.toUpperCase().includes("EPI") || h.opc.toUpperCase().includes("UNIFORME"));
+      const naoEAtual = h.id !== p.id;
+      const statusKey = (h.status || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const foiAprovado = (statusKey.includes("APROVADA") || statusKey.includes("BAIXADA")) && !statusKey.includes("NAO");
+      return mesmoColab && ehEpi && naoEAtual && foiAprovado;
+    }).sort((a, b) => (b.dataObj || 0) - (a.dataObj || 0));
+
+    // Montar HTML do histórico para a imagem
+    let historicoHTML = "";
+    if (historicoAprovado.length > 0) {
+      const linhas = historicoAprovado.map(h => {
+        const data = h.dt ? h.dt.split(" ")[0] : "--";
+        const sap = h.sap || "--";
+        const itensOK = h.its ? h.its.split("|").filter(i => i.includes("{OK}")).map(i => i.trim().replace(/\s*\{(OK|NAO|FALTA)\}\s*/g, "").replace(/\s*\[.*?\]\s*/g, "").trim()).filter(Boolean) : [];
+        if (itensOK.length === 0) return "";
+        return `
+          <div style="padding:8px 0;border-bottom:1px solid #f3f4f6;">
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+              <span style="font-size:9px;font-weight:700;color:#9ca3af;">${data}</span>
+              <span style="font-size:8px;font-weight:700;color:#059669;background:#ecfdf5;padding:2px 8px;border-radius:8px;">SAP: ${sap}</span>
+            </div>
+            <div style="display:flex;flex-wrap:wrap;gap:4px;">
+              ${itensOK.map(it => `<span style="font-size:9px;font-weight:700;color:#111827;background:#f3f4f6;padding:3px 8px;border-radius:8px;text-transform:uppercase;">${it}</span>`).join('')}
+            </div>
+          </div>`;
+      }).filter(Boolean).join("");
+
+      if (linhas) {
+        historicoHTML = `
+          <div style="margin-top:16px;padding-top:14px;border-top:2px solid #e5e7eb;">
+            <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Histórico de Entregas</div>
+            ${linhas}
+          </div>`;
+      }
+    }
+
+    if (!historicoHTML) {
+      historicoHTML = `
+        <div style="margin-top:16px;padding-top:14px;border-top:2px solid #e5e7eb;text-align:center;">
+          <div style="font-size:9px;font-weight:700;color:#059669;background:#ecfdf5;padding:6px 14px;border-radius:10px;display:inline-block;text-transform:uppercase;letter-spacing:1px;">Nenhuma solicitação nos últimos 3 meses</div>
+        </div>`;
+    }
+
+    const cardDiv = document.createElement("div");
+    cardDiv.id = "exportCardInline";
+    cardDiv.style.cssText = "position:fixed;top:-9999px;left:-9999px;z-index:-1;width:420px;font-family:'Inter',sans-serif;";
+    cardDiv.innerHTML = `
+      <div style="background:#fff;border-radius:20px;overflow:hidden;border:1px solid #e5e7eb;">
+        <div style="background:linear-gradient(135deg,#F40009 0%,#900005 100%);padding:20px;">
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:14px;">
+            ${avatarHTML}
+            <div style="flex:1;">
+              <div style="font-size:14px;font-weight:900;color:#fff;text-transform:uppercase;line-height:1.2;">${p.nome}</div>
+              <div style="font-size:10px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:1.5px;margin-top:4px;">${p.opc}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 12px;">
+              <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;">Matrícula</div>
+              <div style="font-size:14px;font-weight:900;color:#fff;">${p.mat}</div>
+            </div>
+            <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:10px;padding:8px 12px;">
+              <div style="font-size:8px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1px;">Equipe</div>
+              <div style="font-size:14px;font-weight:900;color:#fff;">${p.equ}</div>
+            </div>
+          </div>
+        </div>
+        <div style="padding:18px 20px 20px;">
+          <div style="font-size:9px;font-weight:700;color:#9ca3af;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px;">Solicitação Atual</div>
+          ${itensHTML}
+          ${historicoHTML}
+          <div style="margin-top:14px;padding-top:10px;border-top:1px solid #e5e7eb;text-align:center;">
+            <div style="font-size:8px;font-weight:700;color:#d4d4d8;text-transform:uppercase;letter-spacing:1.5px;">Protocolo #${p.id || "N/A"} · ${p.dt || ""}</div>
+          </div>
+        </div>
+      </div>`;
+    document.body.appendChild(cardDiv);
+
+    if (typeof html2canvas !== "undefined") {
+      html2canvas(cardDiv, { scale: 2, useCORS: true, allowTaint: true, backgroundColor: null }).then(canvas => {
+        cardDiv.remove();
+        canvas.style.cssText = "width:100%;max-width:320px;border-radius:12px;box-shadow:0 4px 15px rgba(0,0,0,0.08);";
+        container.innerHTML = "";
+        container.appendChild(canvas);
+        this._exportCanvas = canvas;
+      }).catch(() => { cardDiv.remove(); container.innerHTML = '<p class="text-[10px] text-red-400 text-center">Erro ao gerar preview</p>'; });
+    }
+  },
+
+  _carregarHistoricoEPI() {
+    const container = document.getElementById("tabelaHistorico");
+    const contLabel = document.getElementById("contHistorico");
+    if (!container || !this._pedidoExport) return;
+
+    const matAtual = String(this._pedidoExport.mat).trim();
+    const idAtual = this._pedidoExport.id;
+
+    // Filtrar SOMENTE pedidos APROVADOS de EPI/Uniforme do mesmo colaborador
+    const historico = (State.pedidos || []).filter(p => {
+      const mesmoColab = String(p.mat).trim() === matAtual;
+      const ehEpi = p.opc && (p.opc.toUpperCase().includes("EPI") || p.opc.toUpperCase().includes("UNIFORME"));
+      const naoEAtual = p.id !== idAtual;
+      const statusKey = (p.status || "").toUpperCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const foiAprovado = (statusKey.includes("APROVADA") || statusKey.includes("BAIXADA")) && !statusKey.includes("NAO");
+      return mesmoColab && ehEpi && naoEAtual && foiAprovado;
+    }).sort((a, b) => (b.dataObj || 0) - (a.dataObj || 0));
+
+    // Contar apenas itens aprovados ({OK}) no total
+    let totalItensAprovados = 0;
+
+    const rows = historico.map(h => {
+      const data = h.dt ? h.dt.split(" ")[0] : "--";
+      const reserva = h.sap || "--";
+
+      // Só mostrar itens que foram APROVADOS ({OK})
+      const itensAprovados = h.its ? h.its.split("|").map(i => {
+        const raw = i.trim();
+        if (!raw.includes("{OK}")) return null; // Ignorar {NAO} e {FALTA}
+        const limpo = raw.replace(/\s*\{(OK|NAO|FALTA)\}\s*/g, "").replace(/\s*\[.*?\]\s*/g, "").trim();
+        return limpo || null;
+      }).filter(Boolean) : [];
+
+      if (itensAprovados.length === 0) return ""; // Se nenhum item foi aprovado, não mostrar
+
+      totalItensAprovados += itensAprovados.length;
+
+      return `
+        <div class="py-3 border-b border-[#f3f4f6] last:border-none">
+          <div class="flex items-center justify-between mb-2">
+            <div class="flex items-center gap-2">
+              <div class="w-2 h-2 rounded-full bg-emerald-500 flex-shrink-0"></div>
+              <span class="text-[10px] font-bold text-[#9ca3af]">${data}</span>
+            </div>
+            <div class="flex items-center gap-1.5">
+              ${reserva !== "--" ? `<span class="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">SAP: ${reserva}</span>` : ''}
+              <span class="text-[8px] font-bold text-[#9ca3af] bg-[#f3f4f6] px-1.5 py-0.5 rounded-lg">#${h.id || 'N/A'}</span>
+            </div>
+          </div>
+          <div class="flex flex-wrap gap-1.5 pl-4">
+            ${itensAprovados.map(item => `<span class="text-[10px] font-bold text-[#111827] bg-[#f3f4f6] px-2.5 py-1 rounded-xl uppercase border border-[#e5e7eb]">${item}</span>`).join('')}
+          </div>
+        </div>`;
+    }).filter(Boolean).join("");
+
+    if (contLabel) contLabel.textContent = `${totalItensAprovados} entregue${totalItensAprovados !== 1 ? 's' : ''}`;
+
+    if (!rows) {
+      container.innerHTML = `
+        <div class="text-center py-6">
+          <i data-lucide="check-circle" class="w-8 h-8 text-emerald-200 mx-auto mb-2"></i>
+          <p class="text-[10px] font-bold text-[#9ca3af]">Nenhuma solicitação aprovada nos últimos 3 meses</p>
+          <p class="text-[9px] text-[#d4d4d8] mt-1">Este colaborador não retirou EPI/Uniforme neste período</p>
+        </div>`;
+      if (contLabel) contLabel.textContent = "0 entregas";
+      if (window.lucide) window.lucide.createIcons();
+      return;
+    }
+
+    container.innerHTML = `<div class="max-h-[250px] overflow-y-auto">${rows}</div>`;
+    if (window.lucide) window.lucide.createIcons();
   },
 
   concluirAprovacao(id) {
@@ -1271,17 +1644,17 @@ export const UI = {
 
   copiarCodigo(codigo) {
     navigator.clipboard.writeText(codigo).then(() => {
-      const Toast = Swal.mixin({
-        toast: true,
-        position: "top-end",
-        showConfirmButton: false,
-        timer: 2000,
-        timerProgressBar: true,
-      });
-      Toast.fire({
-        icon: "success",
-        title: "Copiado!",
-      });
+      // Feedback visual sem fechar o popup principal (sem Swal.fire)
+      const toast = document.createElement("div");
+      toast.className = "fixed top-4 right-4 z-[99999] bg-zinc-900 text-white px-4 py-2.5 rounded-xl shadow-2xl flex items-center gap-2 text-xs font-bold uppercase tracking-wider animate-entrada-suave";
+      toast.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-400"><polyline points="20 6 9 17 4 12"></polyline></svg> Copiado!`;
+      document.body.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = "0";
+        toast.style.transform = "translateY(-10px)";
+        toast.style.transition = "all 0.3s ease";
+        setTimeout(() => toast.remove(), 300);
+      }, 1500);
     });
   },
 
