@@ -12,6 +12,47 @@ export const UI = {
   contencaoListaScroll: 0,
 
   // =========================================================
+  // 0. DML DINÂMICO — estilos e render dos cards do admin
+  // =========================================================
+  _dmlStyleAdmin: {
+    DML_COMERCIAL: { label: "Comercial",  icon: "store" },
+    DML_CCB:       { label: "CCB",        icon: "building" },
+    DML_ESTOQUE:   { label: "Estoque",    icon: "package" },
+    DML_OFICINA:   { label: "Oficina",    icon: "wrench" },
+    DML_INDUSTRIA: { label: "Industria",  icon: "factory" },
+    DML_VESTIARIO: { label: "Vestiario",  icon: "shirt" },
+  },
+  _estiloDmlAdmin(id) {
+    if (this._dmlStyleAdmin[id]) return this._dmlStyleAdmin[id];
+    const sufixo = String(id || "").replace(/^DML_/, "").replace(/_/g, " ").toLowerCase();
+    const label = sufixo.replace(/\b\w/g, (c) => c.toUpperCase());
+    return { label, icon: "layers" };
+  },
+  renderizarCardsDmlAdmin() {
+    const grid = document.getElementById("gridSetores");
+    if (!grid) return;
+    const dmls = (State.dmlsDisponiveis && State.dmlsDisponiveis.length)
+      ? State.dmlsDisponiveis
+      : Object.keys(this._dmlStyleAdmin);
+
+    // Remove botões DML antigos (mantém apenas o primeiro card estático — EPI_UNIFORME)
+    Array.from(grid.querySelectorAll("[data-dml-dinamico]")).forEach((el) => el.remove());
+
+    const html = dmls.map((id) => {
+      const e = this._estiloDmlAdmin(id);
+      const nomeCompleto = `DML ${e.label}`;
+      return `
+        <button data-dml-dinamico="${id}" onclick="Sistema.selecionarSetor('${id}', '${nomeCompleto.replace(/'/g, "\\'")}')" class="bg-white border border-zinc-100 p-5 md:p-7 rounded-xl text-left group cursor-pointer hover:border-red-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+          <i data-lucide="${e.icon}" class="w-6 h-6 text-zinc-300 group-hover:text-red-500 mb-4 transition-colors"></i>
+          <h3 class="text-xs md:text-sm font-black leading-tight uppercase text-zinc-900">${e.label}</h3>
+        </button>`;
+    }).join("");
+
+    grid.insertAdjacentHTML("beforeend", html);
+    if (window.lucide) window.lucide.createIcons();
+  },
+
+  // =========================================================
   // 1. INICIALIZAÇÃO (LISTENERS)
   // =========================================================
   init() {
@@ -1660,8 +1701,10 @@ export const UI = {
     });
   },
 
-  exportarPedido(p) {
+  async exportarPedido(p) {
     if (!p) return;
+    // Força refresh dos colaboradores para capturar número de WhatsApp recém-adicionado
+    try { await Api.carregarColaboradores(); } catch {}
     const colabMatch = (State.colaboradores || []).find(c => String(c.matricula).trim() === String(p.mat).trim());
     const avatarUrl = (colabMatch && colabMatch.imagem) ? colabMatch.imagem : "";
     const avatarHTML = avatarUrl
@@ -1739,6 +1782,9 @@ export const UI = {
 
     document.body.appendChild(cardDiv);
 
+    // Guarda dados do pedido para o botão WhatsApp
+    window._exportPedido = { ...p, _colab: colabMatch || null };
+
     Swal.fire({
       title: "",
       html: `
@@ -1746,7 +1792,18 @@ export const UI = {
           <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide mb-1">Pré-visualização</h3>
           <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-widest mb-4">Segure a imagem para salvar e enviar</p>
           <div id="exportPreview" class="flex justify-center"><div class="w-10 h-10 border-[3px] border-zinc-200 border-t-[#F40009] rounded-full animate-spin"></div></div>
-          <div class="grid grid-cols-3 gap-2 mt-4">
+          ${
+            (colabMatch && colabMatch.numero)
+              ? `<button id="btnWhatsAppExport" onclick="UI.enviarWhatsAppExport()" class="w-full mt-4 py-3.5 rounded-2xl font-black uppercase text-[12px] tracking-widest bg-[#25D366] hover:bg-[#1da851] text-white active:scale-[0.98] transition-all border-none cursor-pointer flex items-center justify-center gap-2 shadow-lg shadow-green-200">
+                  <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
+                  Enviar pelo WhatsApp
+                </button>`
+              : `<div class="w-full mt-4 py-3.5 rounded-2xl font-black uppercase text-[11px] tracking-widest bg-zinc-50 text-zinc-400 border border-zinc-100 flex items-center justify-center gap-2" title="Número não cadastrado">
+                  <i data-lucide="phone-off" class="w-4 h-4"></i>
+                  Sem número cadastrado
+                </div>`
+          }
+          <div class="grid grid-cols-3 gap-2 mt-2">
             <button onclick="Swal.close()" class="py-3 rounded-2xl font-black uppercase text-[11px] tracking-widest text-zinc-600 hover:bg-zinc-200 transition-all bg-zinc-100 cursor-pointer border-none">Voltar</button>
             <button id="btnBaixarExport" onclick="UI.baixarImagemExport()" class="py-3 rounded-2xl font-black uppercase text-[11px] tracking-widest text-zinc-700 hover:bg-zinc-200 transition-all bg-zinc-100 cursor-pointer border-none flex items-center justify-center gap-1.5">
               <i data-lucide="download" class="w-4 h-4"></i> Baixar
@@ -1780,7 +1837,7 @@ export const UI = {
           }).catch(() => { cardDiv.remove(); });
         }, 500);
       },
-      willClose: () => { const el = document.getElementById("exportCard"); if (el) el.remove(); delete window._exportCanvas; }
+      willClose: () => { const el = document.getElementById("exportCard"); if (el) el.remove(); delete window._exportCanvas; delete window._exportPedido; }
     });
   },
 
@@ -1817,6 +1874,68 @@ export const UI = {
         }
       }, 2200);
     }
+  },
+
+  async enviarWhatsAppExport() {
+    const pedido = window._exportPedido;
+    const canvas = window._exportCanvas;
+    if (!pedido || !pedido._colab || !pedido._colab.numero) return;
+
+    const btn = document.getElementById("btnWhatsAppExport");
+    const labelOriginal = btn ? btn.innerHTML : "";
+
+    // Formata o número em padrão internacional (Brasil = 55)
+    let numero = String(pedido._colab.numero || "").replace(/\D/g, "");
+    if (!numero) return;
+    if (numero.length === 10 || numero.length === 11) numero = "55" + numero;
+
+    // Copia imagem para clipboard antes de abrir o WhatsApp
+    let copiou = false;
+    if (canvas) {
+      try {
+        const blob = await new Promise((resolve) =>
+          canvas.toBlob(resolve, "image/png")
+        );
+        if (
+          navigator.clipboard &&
+          window.ClipboardItem &&
+          navigator.clipboard.write
+        ) {
+          await navigator.clipboard.write([
+            new ClipboardItem({ "image/png": blob }),
+          ]);
+          copiou = true;
+        }
+      } catch {
+        copiou = false;
+      }
+    }
+
+    const primeiroNome = String(pedido.nome || "").split(" ")[0] || "";
+    const protocolo = pedido.id ? `#${pedido.id}` : "";
+    const status = pedido.status || "Atualizado";
+    const texto =
+      `Olá ${primeiroNome}! 👋\n\n` +
+      `Seu pedido ${protocolo} teve o status atualizado para: *${status}*.\n\n` +
+      (copiou
+        ? `A pré-visualização foi copiada — é só colar (segurar e toque em Colar) e enviar 📎`
+        : `Confira os detalhes em anexo.`);
+
+    if (btn) {
+      btn.innerHTML =
+        '<svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg> Abrindo WhatsApp...';
+      btn.disabled = true;
+    }
+
+    const url = `https://wa.me/${numero}?text=${encodeURIComponent(texto)}`;
+    window.open(url, "_blank");
+
+    setTimeout(() => {
+      if (btn) {
+        btn.innerHTML = labelOriginal;
+        btn.disabled = false;
+      }
+    }, 1500);
   },
 
   baixarImagemExport() {

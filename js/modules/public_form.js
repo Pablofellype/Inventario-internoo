@@ -271,7 +271,7 @@ export const PublicForm = {
                 <p class="text-xs text-zinc-400 mt-2">Escolha a categoria do pedido</p>
             </div>
             <div class="flex flex-col gap-2.5">
-                <button onclick="PublicForm.selecionarTipo('SOLICITACAO_EPI_UNIFORME')" class="group w-full p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 cursor-pointer flex items-center gap-4 active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: 0.12s">
+                <button onclick="PublicForm.selecionarTipo('EPI_UNIFORME')" class="group w-full p-4 sm:p-5 bg-white border-2 border-zinc-200 rounded-xl hover:border-blue-400 hover:bg-blue-50/30 transition-all duration-200 cursor-pointer flex items-center gap-4 active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: 0.12s">
                     <div class="w-16 h-16 bg-blue-50 rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><img src="./assets/img/epi_fundo_trasparente.png" alt="EPI" class="w-14 h-14 object-contain"></div>
                     <div class="flex-1"><p class="font-black text-zinc-900 group-hover:text-blue-600 uppercase text-sm leading-tight transition-colors">EPI & Uniforme</p><p class="text-[10px] text-zinc-400 mt-0.5">Equipamentos e roupas</p></div>
                     <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-blue-500 transition-colors"></i>
@@ -291,23 +291,59 @@ export const PublicForm = {
         } else {
             // Limpar DML ao trocar para EPI/Uniforme
             this.dadosPedido.setorDML = "";
-            this.renderizarSelecaoProdutos('SOLICITACAO_EPI_UNIFORME');
+            this.renderizarSelecaoProdutos('EPI_UNIFORME');
         }
     },
 
     // =================================================================
     // ETAPA 4: LOCAL
     // =================================================================
-    renderizarEtapa4() {
+    _dmlStyleMap: {
+        DML_COMERCIAL: { nome: "DML Comercial", icon: "briefcase", cor: "bg-blue-50 text-blue-500" },
+        DML_ESTOQUE:   { nome: "DML Estoque",   icon: "package",     cor: "bg-amber-50 text-amber-500" },
+        DML_CCB:       { nome: "DML CCB",       icon: "building-2",  cor: "bg-purple-50 text-purple-500" },
+        DML_INDUSTRIA: { nome: "DML Indústria", icon: "factory",     cor: "bg-emerald-50 text-emerald-500" },
+        DML_OFICINA:   { nome: "DML Oficina",   icon: "wrench",      cor: "bg-orange-50 text-orange-500" },
+        DML_VESTIARIO: { nome: "DML Vestiário", icon: "shirt",       cor: "bg-pink-50 text-pink-500" },
+    },
+    _fallbackCores: [
+        "bg-teal-50 text-teal-500",
+        "bg-cyan-50 text-cyan-500",
+        "bg-indigo-50 text-indigo-500",
+        "bg-violet-50 text-violet-500",
+        "bg-rose-50 text-rose-500",
+        "bg-sky-50 text-sky-500",
+        "bg-lime-50 text-lime-500",
+        "bg-fuchsia-50 text-fuchsia-500",
+    ],
+    _estiloDml(id) {
+        if (this._dmlStyleMap[id]) return this._dmlStyleMap[id];
+        const sufixo = String(id || "").replace(/^DML_/, "").replace(/_/g, " ").toLowerCase();
+        const nomeFormatado = "DML " + sufixo.replace(/\b\w/g, (c) => c.toUpperCase());
+        const hash = [...id].reduce((h, c) => h + c.charCodeAt(0), 0);
+        const cor = this._fallbackCores[hash % this._fallbackCores.length];
+        return { nome: nomeFormatado, icon: "layers", cor };
+    },
+
+    async renderizarEtapa4() {
         this.atualizarProgresso(4);
-        const locais = [
-            { id: "DML_COMERCIAL", nome: "DML Comercial", icon: "briefcase", cor: "bg-blue-50 text-blue-500" },
-            { id: "DML_ESTOQUE", nome: "DML Estoque", icon: "package", cor: "bg-amber-50 text-amber-500" },
-            { id: "DML_CCB", nome: "DML CCB", icon: "building-2", cor: "bg-purple-50 text-purple-500" },
-            { id: "DML_INDUSTRIA", nome: "DML Indústria", icon: "factory", cor: "bg-emerald-50 text-emerald-500" },
-            { id: "DML_OFICINA", nome: "DML Oficina", icon: "wrench", cor: "bg-orange-50 text-orange-500" },
-            { id: "DML_VESTIARIO", nome: "DML Vestiário", icon: "shirt", cor: "bg-pink-50 text-pink-500" }
-        ];
+
+        // Se a lista de DMLs ainda não foi carregada, faz um loader rápido antes de renderizar
+        if (!State.dmlsDisponiveis || !State.dmlsDisponiveis.length) {
+            const area = document.getElementById("areaEtapas");
+            if (area) {
+                area.innerHTML = `<div class="text-center py-16 sm:py-20"><div class="w-12 h-12 border-[3px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin mx-auto"></div><p class="mt-5 text-[11px] font-black uppercase text-zinc-400 tracking-widest">Carregando DMLs...</p></div>`;
+            }
+            try { await Api.carregarDmlsDisponiveis(); } catch {}
+        }
+
+        const dmlsDinamicos = (State.dmlsDisponiveis && State.dmlsDisponiveis.length)
+            ? State.dmlsDisponiveis
+            : Object.keys(this._dmlStyleMap);
+        const locais = dmlsDinamicos.map((id) => {
+            const e = this._estiloDml(id);
+            return { id, nome: e.nome, icon: e.icon, cor: e.cor };
+        });
         const botoes = locais.map((l, i) => `
             <button onclick="PublicForm.finalizarDML('${l.id}')" class="group w-full p-4 bg-white border-2 border-zinc-200 rounded-xl flex items-center gap-3.5 hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: ${0.12 + i * 0.06}s">
                 <div class="w-10 h-10 ${l.cor} rounded-lg flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-200"><i data-lucide="${l.icon}" class="w-4.5 h-4.5"></i></div>
@@ -832,7 +868,7 @@ export const PublicForm = {
                     class="w-full bg-[#F40009] text-white py-4 rounded-xl font-black uppercase tracking-[0.15em] text-sm shadow-[0_8px_25px_rgba(244,0,9,0.25)] hover:shadow-[0_14px_40px_rgba(244,0,9,0.4)] hover:translate-y-[-2px] active:translate-y-[1px] transition-all duration-200 flex items-center justify-center gap-2">
                     Confirmar Pedido <i data-lucide="send" class="w-4 h-4"></i>
                 </button>
-                <button onclick="PublicForm.renderizarSelecaoProdutos('${this.dadosPedido.tipo === 'MATERIAL' ? this.dadosPedido.setorDML : 'SOLICITACAO_EPI_UNIFORME'}')"
+                <button onclick="PublicForm.renderizarSelecaoProdutos('${this.dadosPedido.tipo === 'MATERIAL' ? this.dadosPedido.setorDML : 'EPI_UNIFORME'}')"
                     class="mt-3 w-full text-zinc-400 font-bold text-[11px] uppercase tracking-wider hover:text-[#F40009] transition-colors py-2 flex items-center justify-center gap-1">
                     <i data-lucide="arrow-left" class="w-3.5 h-3.5"></i> Voltar e Alterar
                 </button>
@@ -859,7 +895,7 @@ export const PublicForm = {
             matricula: this.dadosPedido.matricula,
             nome: this.dadosPedido.colaborador,
             equipe: this.dadosPedido.equipe,
-            tipo: this.dadosPedido.tipo === 'SOLICITACAO_EPI_UNIFORME' ? 'EPI_UNIFORME' : 'MATERIAL',
+            tipo: this.dadosPedido.tipo === 'EPI_UNIFORME' ? 'EPI_UNIFORME' : 'MATERIAL',
             local: this.dadosPedido.setorDML || "",
             itens: itensTexto
         };
@@ -906,7 +942,7 @@ export const PublicForm = {
 
     atualizarProgresso(passo) {
         const titulos = { 1: "Identificação", 2: "Equipe", 3: "Tipo", 4: "Local", 5: "Seleção", 6: "Revisão" };
-        const total = this.dadosPedido.tipo === 'SOLICITACAO_EPI_UNIFORME' ? '5' : '6';
+        const total = this.dadosPedido.tipo === 'EPI_UNIFORME' ? '5' : '6';
         document.getElementById("contadorEtapa").innerText = `${titulos[passo] || 'Etapa'} (${passo}/${total})`;
         this.passoAtual = passo;
     },
@@ -942,7 +978,7 @@ export const PublicForm = {
             return this.renderizarSelecaoProdutos(
                 this.dadosPedido.tipo === 'MATERIAL'
                     ? this.dadosPedido.setorDML
-                    : 'SOLICITACAO_EPI_UNIFORME'
+                    : 'EPI_UNIFORME'
             );
         }
     }

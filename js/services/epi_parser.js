@@ -41,7 +41,12 @@ export const EpiParser = {
             ? tamanhosStr.split("|").map((t) => t.trim()).filter(Boolean)
             : [tamanhosStr ? tamanhosStr.trim() : "UNIDADE"];
 
-        const parsedSub = parseSubCodigos(subCodigos || "");
+        // A coluna CODIGO pode conter pipes (novo padrão) OU ser um código único (antigo)
+        // Se contém `|`, tratamos igual SUB_CODIGOS (posicional com TAMANHOS).
+        const codigoTemPipe = codigoUnico && codigoUnico.includes("|");
+        const fontePipe = subCodigos || (codigoTemPipe ? codigoUnico : "");
+
+        const parsedSub = parseSubCodigos(fontePipe || "");
         const labelMap = new Map();
         parsedSub.forEach((p) => {
           if (p.label && p.code) {
@@ -63,7 +68,7 @@ export const EpiParser = {
             code = codigoUnico;
           }
           if (!code) {
-            code = `${nome}-${tam}`.toUpperCase().replace(/\s+/g, "-");
+            code = "VERIFICAR";
           }
           return { label: tam, code: code };
         });
@@ -84,6 +89,8 @@ function normalizar(v) {
     .toUpperCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    // Remove prefixos comuns para pareamento: "N\u00ba 36" \u2192 "36", "N\u00b0 38" \u2192 "38", "N. 40" \u2192 "40"
+    .replace(/^(N[\u00ba\u00b0]\.?\s*|N\.\s*|OPCAO\s*\d*\s*[\):]*\s*)/i, "")
     .replace(/\s+/g, " ")
     .trim();
 }

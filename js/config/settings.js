@@ -9,16 +9,10 @@ export const settings = {
 
   // Mapeamento dos GIDs (IDs das abas)
   mapeamento: {
-    DML_COMERCIAL: "0",
-    DML_VESTIARIO: "280409167",
-    DML_OFICINA: "1556469431",
-    DML_INDUSTRIA: "201454419",
-    DML_ESTOQUE: "282836290",
-    DML_CCB: "757166017",
+    DML_S: "1608587582", // Fonte única de todos os DMLs (coluna DMLS define o setor)
+    EPI_UNIFORME: "894099474", // Aba SOLICITACAO_EPI_UNIFORMES (nome | foto | tamanhos | codigo em pipe)
     PEDIDOS_LOG: "1936057939",
-    EPI_UNIFORME: "1981222851",
     COLABORADORES: "1303883713",
-    SOLICITACAO_EPI_UNIFORME: "127263952",
     CONTENCAO_LATERAL: "2037674408",
   },
 

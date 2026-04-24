@@ -319,7 +319,10 @@ window.Sistema = {
     return Api.sincronizarPedidos(tudo);
   },
 
-  preCarregarTudo: () => Api.preCarregarTudo(),
+  preCarregarTudo: async () => {
+    await Api.preCarregarTudo();
+    if (UI.renderizarCardsDmlAdmin) UI.renderizarCardsDmlAdmin();
+  },
 
   // Filtro de Datas
   aplicarFiltros: () => {

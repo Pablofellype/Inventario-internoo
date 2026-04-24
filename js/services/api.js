@@ -32,8 +32,8 @@ export const Api = {
         let dadosProcessados;
 
         // --- SELEÇÃO INTELIGENTE DO PROCESSADOR ---
-        if (cat === "SOLICITACAO_EPI_UNIFORME") {
-          // Usa a lógica nova da barra |
+        if (cat === "EPI_UNIFORME") {
+          // Nova aba SOLICITACAO_EPI_UNIFORMES: nome | foto | tamanhos (|) | codigo (|)
           dadosProcessados = EpiParser.parse(csv);
         } else if (cat === "PEDIDOS_LOG") {
           dadosProcessados = this.processarCSVPedidos(csv);
@@ -42,6 +42,25 @@ export const Api = {
         }
 
         await Cache.salvar(cat, dadosProcessados);
+
+        // Se for o DML_S, desdobra em caches individuais por DML
+        if (cat === "DML_S") {
+          const dmlsSet = new Set();
+          const porDml = new Map();
+          dadosProcessados.forEach((item) => {
+            (item._dmls || []).forEach((dml) => {
+              dmlsSet.add(dml);
+              if (!porDml.has(dml)) porDml.set(dml, []);
+              porDml.get(dml).push(item);
+            });
+          });
+          State.dmlsDisponiveis = Array.from(dmlsSet).sort();
+          await Promise.all(
+            Array.from(porDml.entries()).map(([dml, itens]) =>
+              Cache.salvar(dml, itens)
+            )
+          );
+        }
 
         if (isSetorProdutos(cat)) {
           dadosProcessados.forEach((item) => {
@@ -76,63 +95,39 @@ export const Api = {
     await Promise.all(promessas);
     State.catalogoProdutos = Array.from(catalogoMap.values());
 
-    // Cruzar códigos reais do EPI_UNIFORME com SOLICITACAO_EPI_UNIFORME
-    try {
-      const epiReal = await Cache.carregar("EPI_UNIFORME");
-      const solicitacao = await Cache.carregar("SOLICITACAO_EPI_UNIFORME");
-      if (epiReal && solicitacao) {
-        // Normaliza labels removendo prefixos como "Nº", "N.", "Nº ", "Opção", etc.
-        const normLabel = (s) => String(s || "").toUpperCase().trim()
-          .replace(/^(N[º°]\.?\s*|N\.\s*|OPCAO\s*\d*\s*[\):]*\s*|OPÇÃO\s*\d*\s*[\):]*\s*)/gi, "")
-          .replace(/\s+/g, " ").trim();
-
-        const codMap = new Map();
-        epiReal.forEach(item => {
-          if (!item || !item.root) return;
-          const key = item.root.toUpperCase().trim();
-          const mainCode = (item.vars && item.vars.length === 1) ? item.vars[0].code : "";
-          const subCodes = new Map();
-          if (item.vars) {
-            item.vars.forEach(v => {
-              if (v.label && v.code) {
-                subCodes.set(normLabel(v.label), v.code);
-              }
-            });
-          }
-          codMap.set(key, { mainCode, subCodes });
-        });
-
-        let atualizado = false;
-        solicitacao.forEach(item => {
-          if (!item || !item.root) return;
-          const ref = codMap.get(item.root.toUpperCase().trim());
-          if (!ref) return;
-          item.vars.forEach(v => {
-            // Só substituir se o código atual parece ser gerado automaticamente (padrão NOME-LABEL)
-            const codigoAtual = String(v.code || "");
-            const rootHifen = item.root.toUpperCase().replace(/\s+/g, "-");
-            const pareceGerado = codigoAtual.includes(rootHifen);
-            if (!pareceGerado) return; // Já tem um código real, não sobrescrever
-
-            const labelKey = normLabel(v.label);
-            if (ref.subCodes.has(labelKey)) {
-              v.code = ref.subCodes.get(labelKey);
-              atualizado = true;
-            } else if (ref.mainCode && item.vars.length === 1) {
-              v.code = ref.mainCode;
-              atualizado = true;
-            }
-          });
-        });
-        if (atualizado) {
-          await Cache.salvar("SOLICITACAO_EPI_UNIFORME", solicitacao);
-        }
-      }
-    } catch (e) {
-      console.warn("Aviso: não foi possível cruzar códigos EPI:", e);
-    }
-
     console.log("🏁 Site carregado!");
+  },
+
+  // =========================================================
+  // 1b. CARREGA SÓ OS DMLs DISPONÍVEIS (rápido)
+  // =========================================================
+  async carregarDmlsDisponiveis() {
+    try {
+      const gid = settings.mapeamento["DML_S"];
+      if (!gid) return;
+      const url = `${settings.baseDados}&gid=${gid}&t=${Date.now()}`;
+      const res = await fetch(url);
+      const csv = await res.text();
+      const itens = this.processarCSV(csv);
+      const dmlsSet = new Set();
+      const porDml = new Map();
+      itens.forEach((item) => {
+        (item._dmls || []).forEach((dml) => {
+          dmlsSet.add(dml);
+          if (!porDml.has(dml)) porDml.set(dml, []);
+          porDml.get(dml).push(item);
+        });
+      });
+      State.dmlsDisponiveis = Array.from(dmlsSet).sort();
+      await Cache.salvar("DML_S", itens);
+      await Promise.all(
+        Array.from(porDml.entries()).map(([dml, lista]) =>
+          Cache.salvar(dml, lista)
+        )
+      );
+    } catch (e) {
+      console.warn("Erro ao carregar DMLs disponíveis:", e);
+    }
   },
 
   // =========================================================
@@ -434,19 +429,29 @@ export const Api = {
       }
 
       if (navigator.onLine) {
-        const gid = settings.mapeamento[State.categoriaAtual];
-        const url = `${settings.baseDados}&gid=${gid}&t=${Date.now()}`;
+        const cat = State.categoriaAtual;
+        const isDmlIndividual = cat && cat.startsWith("DML_") && cat !== "DML_S";
+        const gidAlvo = isDmlIndividual
+          ? settings.mapeamento["DML_S"]
+          : settings.mapeamento[cat];
+        if (!gidAlvo) return;
+        const url = `${settings.baseDados}&gid=${gidAlvo}&t=${Date.now()}`;
         const res = await fetch(url);
         const csv = await res.text();
 
-        // --- SELEÇÃO INTELIGENTE AQUI TAMBÉM ---
-        if (State.categoriaAtual === "SOLICITACAO_EPI_UNIFORME") {
+        if (cat === "EPI_UNIFORME") {
           State.ativos = EpiParser.parse(csv);
+        } else if (isDmlIndividual) {
+          // Filtra itens da planilha DML_S onde a coluna DMLS contém o DML selecionado
+          const todos = this.processarCSV(csv);
+          State.ativos = todos.filter(
+            (item) => (item._dmls || []).includes(cat)
+          );
         } else {
           State.ativos = this.processarCSV(csv);
         }
 
-        Cache.salvar(State.categoriaAtual, State.ativos);
+        Cache.salvar(cat, State.ativos);
         UI.renderizarEstoque();
       }
     } catch (err) {
@@ -541,6 +546,19 @@ export const Api = {
   // =========================================================
   // 7. PARSERS (PROCESSADORES DE CSV)
   // =========================================================
+  // Normaliza nome de DML: "DML COMERCIAL" / "dml comercial" / "Comercial" \u2192 "DML_COMERCIAL"
+  _normDmlName(s) {
+    let n = String(s || "")
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+      .replace(/\s+/g, "_");
+    if (!n) return "";
+    if (!n.startsWith("DML_")) n = "DML_" + n;
+    return n;
+  },
+
   processarCSV(texto) {
     const lines = texto.split(/\r?\n/).filter((l) => l.trim());
     if (lines.length < 2) return [];
@@ -554,6 +572,7 @@ export const Api = {
     );
     const iSub = head.findIndex((h) => h.includes("SUB") && h.includes("CODIGO"));
     const iMax = head.findIndex((h) => h.includes("MAXIMO") || h.includes("MAX"));
+    const iDmls = head.findIndex((h) => h === "DMLS" || h === "DML" || h === "DMLS_");
     return Array.from(
       lines
         .slice(1)
@@ -567,6 +586,7 @@ export const Api = {
             f: cols[head.indexOf("FOTO")],
             sub: cols[iSub] || "",
             max: iMax >= 0 ? parseInt(cols[iMax]) || 0 : 0,
+            dmls: iDmls >= 0 ? cols[iDmls] || "" : "",
           };
           if (!obj.n) return acc;
           const root = obj.n
@@ -592,8 +612,17 @@ export const Api = {
               sub: obj.sub,
               vars: [],
               max: obj.max,
+              _dmls: new Set(),
             });
           acc.get(rootFinal).vars.push({ label: varLFinal, code: obj.c });
+
+          if (obj.dmls) {
+            String(obj.dmls)
+              .split(/[,;|]+/)
+              .map((d) => this._normDmlName(d))
+              .filter((d) => d && d !== "DML_")
+              .forEach((d) => acc.get(rootFinal)._dmls.add(d));
+          }
 
           if (obj.sub && String(obj.sub).includes("|")) {
             const parsed = String(obj.sub)
@@ -627,7 +656,7 @@ export const Api = {
               const todosIguais = new Set(codes).size === 1 && parsed.length > 1;
               parsed.forEach((v) => {
                 if (!v.code || temDuplicados || todosIguais) {
-                  v.code = `${obj.c || rootFinal}-${v.label}`.toUpperCase().replace(/\s+/g, "-");
+                  v.code = "VERIFICAR";
                 }
               });
               acc.get(rootFinal).vars = parsed;
@@ -636,7 +665,10 @@ export const Api = {
           return acc;
         }, new Map())
         .values()
-    );
+    ).map((item) => ({
+      ...item,
+      _dmls: Array.from(item._dmls || []),
+    }));
   },
 
   processarCSVPedidos(texto) {
