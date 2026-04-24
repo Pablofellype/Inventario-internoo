@@ -15,6 +15,16 @@ body {
   overflow-x: hidden;
 }
 
+/* Libera long-press em imagens de pré-visualização (iPhone: copiar/salvar) */
+.img-preview,
+img.img-preview {
+  -webkit-touch-callout: default !important;
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+  touch-action: manipulation;
+  cursor: zoom-in;
+}
+
 /* =========================================
    2. EFEITOS DE FUNDO E AMBIENTE
    ========================================= */

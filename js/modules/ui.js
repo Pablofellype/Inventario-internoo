@@ -12,6 +12,99 @@ export const UI = {
   contencaoListaScroll: 0,
 
   // =========================================================
+  // 0. PREVIEW DE IMAGEM COM COPIAR (WHATSAPP / iOS)
+  // =========================================================
+  async previewImagem(url, titulo = "Imagem") {
+    const safeTitulo = (titulo || "Imagem").replace(/"/g, "&quot;");
+    Swal.fire({
+      html: `
+        <div class="flex flex-col items-center">
+          <p class="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">${safeTitulo}</p>
+          <div class="relative w-full bg-zinc-50 rounded-3xl overflow-hidden border border-zinc-100 p-2">
+            <img id="imgPreviewGrande" src="${url}" class="img-preview w-full h-auto max-h-[55vh] object-contain rounded-2xl" alt="${safeTitulo}" crossorigin="anonymous" draggable="true">
+          </div>
+          <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 mt-3 text-center px-4">No iPhone: segure a imagem para <span class="text-[#F40009]">Copiar</span> e colar no WhatsApp</p>
+          <div class="grid grid-cols-2 gap-2 w-full mt-4">
+            <button id="btnCopiarImg" class="py-3 rounded-2xl bg-[#F40009] hover:bg-[#900005] text-white font-black uppercase tracking-widest text-[11px] transition-all shadow-md flex items-center justify-center gap-2">
+              <i data-lucide="copy" class="w-4 h-4"></i>
+              <span>Copiar</span>
+            </button>
+            <button id="btnBaixarImg" class="py-3 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2">
+              <i data-lucide="download" class="w-4 h-4"></i>
+              <span>Baixar</span>
+            </button>
+          </div>
+        </div>
+      `,
+      showConfirmButton: false,
+      showCloseButton: true,
+      background: "rgba(255, 255, 255, 0.98)",
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => {
+        window.lucide.createIcons();
+
+        const copiar = async () => {
+          const btn = document.getElementById("btnCopiarImg");
+          const labelOriginal = btn.innerHTML;
+          try {
+            const resp = await fetch(url, { mode: "cors" });
+            const blob = await resp.blob();
+            if (
+              navigator.clipboard &&
+              window.ClipboardItem &&
+              navigator.clipboard.write
+            ) {
+              const tipo = blob.type.startsWith("image/") ? blob.type : "image/png";
+              await navigator.clipboard.write([
+                new ClipboardItem({ [tipo]: blob }),
+              ]);
+              btn.innerHTML =
+                '<i data-lucide="check" class="w-4 h-4"></i><span>Copiado!</span>';
+              btn.classList.remove("bg-[#F40009]", "hover:bg-[#900005]");
+              btn.classList.add("bg-emerald-600");
+              window.lucide.createIcons();
+              setTimeout(() => {
+                btn.innerHTML = labelOriginal;
+                btn.classList.add("bg-[#F40009]", "hover:bg-[#900005]");
+                btn.classList.remove("bg-emerald-600");
+                window.lucide.createIcons();
+              }, 1800);
+            } else {
+              throw new Error("Clipboard API não suportada");
+            }
+          } catch (e) {
+            Swal.fire({
+              icon: "info",
+              title: "Segure a imagem",
+              text: "Para copiar no iPhone, segure a imagem e toque em 'Copiar'.",
+              confirmButtonColor: "#F40009",
+              customClass: { popup: "swal2-popup-custom" },
+            });
+          }
+        };
+
+        const baixar = () => {
+          const a = document.createElement("a");
+          a.href = url;
+          a.download = `${safeTitulo.replace(/[^\w\-]+/g, "_")}.jpg`;
+          a.target = "_blank";
+          a.rel = "noopener";
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+        };
+
+        document
+          .getElementById("btnCopiarImg")
+          .addEventListener("click", copiar);
+        document
+          .getElementById("btnBaixarImg")
+          .addEventListener("click", baixar);
+      },
+    });
+  },
+
+  // =========================================================
   // 1. INICIALIZAÇÃO (LISTENERS)
   // =========================================================
   init() {
@@ -2198,7 +2291,7 @@ export const UI = {
         const tam = item.tamanho ? item.tamanho : "UNICO";
         return `
           <button class="contencao-item w-full flex items-center gap-3 p-3 rounded-2xl border border-gray-100 hover:border-red-400 hover:bg-red-50 transition-all text-left" data-index="${index}">
-            <img src="${foto}" class="w-12 h-12 rounded-xl object-cover border border-gray-100 shadow-sm flex-shrink-0">
+            <img src="${foto}" onclick="event.stopPropagation(); UI.previewImagem('${foto}', '${(item.material || "").replace(/'/g, "\\'")}')" class="img-preview w-12 h-12 rounded-xl object-cover border border-gray-100 shadow-sm flex-shrink-0" alt="${item.material}">
             <div class="flex-1 min-w-0">
               <p class="text-xs font-black uppercase text-zinc-900 leading-tight line-clamp-2">${item.material}</p>
               <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Tam: ${tam}</p>
@@ -2255,7 +2348,7 @@ export const UI = {
       title: "Adicionar Quantidade",
       html: `
         <div class="flex items-center gap-3 mb-4">
-          <img src="${foto}" class="w-14 h-14 rounded-2xl object-cover border border-gray-100 shadow-sm">
+          <img src="${foto}" onclick="UI.previewImagem('${foto}', '${(item.material || "").replace(/'/g, "\\'")}')" class="img-preview w-14 h-14 rounded-2xl object-cover border border-gray-100 shadow-sm hover:scale-105 transition-transform" alt="${item.material}">
           <div class="text-left">
             <p class="text-xs font-black uppercase text-zinc-900 leading-tight">${item.material}</p>
             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest">Tam: ${tam}</p>
@@ -2464,7 +2557,7 @@ export const UI = {
           <div class="flex items-center justify-between p-2 rounded-xl border mb-2 bg-orange-50/50 border-orange-100 hover:bg-orange-100 transition-all">
             <div class="flex items-center gap-2">
               <div class="w-1 h-8 bg-orange-300 rounded-full transition-colors"></div>
-              <img src="${fotoUrl}" class="w-10 h-10 rounded-xl object-cover border border-gray-100 shadow-sm flex-shrink-0">
+              <img src="${fotoUrl}" onclick="UI.previewImagem('${fotoUrl}', '${nome.replace(/'/g, "\\'")}')" class="img-preview w-10 h-10 rounded-xl object-cover border border-gray-100 shadow-sm flex-shrink-0 hover:scale-105 transition-transform" alt="${nome}">
               <div class="text-left">
                 <p class="text-[10px] font-black uppercase text-gray-900 leading-none mb-1">${nome}</p>
                 ${tam ? `<p class="text-[9px] font-bold text-gray-400 uppercase">${tam}</p>` : ""}
@@ -2538,7 +2631,7 @@ export const UI = {
         } shadow-sm transition-all flex-shrink-0" title="Alerta de crítico">
                         <i data-lucide="bell" class="w-4 h-4"></i>
                     </button>
-                    <img src="${fotoUrl}" class="w-14 h-14 rounded-2xl object-cover border border-zinc-100 shadow-sm flex-shrink-0">
+                    <img src="${fotoUrl}" onclick="UI.previewImagem('${fotoUrl}', '${(item.material || "").replace(/'/g, "\\'")}')" class="img-preview w-14 h-14 rounded-2xl object-cover border border-zinc-100 shadow-sm flex-shrink-0 hover:scale-105 transition-transform" alt="${item.material}">
                     <div class="text-left flex-1 min-w-0">
                         <p class="text-xs font-black uppercase text-zinc-900 leading-tight mb-1 line-clamp-2">${
                           item.material
