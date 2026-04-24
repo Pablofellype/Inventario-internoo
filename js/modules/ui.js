@@ -12,7 +12,38 @@ export const UI = {
   contencaoListaScroll: 0,
 
   // =========================================================
-  // 0. DML DINÂMICO — estilos e render dos cards do admin
+  // 0. HELPERS GERAIS
+  // =========================================================
+  // Escapa strings vindas da planilha antes de injetar em innerHTML
+  _escHtml(s) {
+    return String(s == null ? "" : s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  },
+
+  // Atualiza o label "há X min" no botão Atualizar do dashboard
+  atualizarLabelUltimaAtualizacao() {
+    const el = document.getElementById("labelUltimaAtualizacao");
+    if (!el) return;
+    const t = State.ultimaAtualizacao;
+    if (!t) {
+      el.textContent = "";
+      return;
+    }
+    const diffSec = Math.floor((Date.now() - t) / 1000);
+    let texto;
+    if (diffSec < 30) texto = "agora";
+    else if (diffSec < 60) texto = `${diffSec}s`;
+    else if (diffSec < 3600) texto = `${Math.floor(diffSec / 60)} min`;
+    else texto = `${Math.floor(diffSec / 3600)}h`;
+    el.textContent = `· ${texto}`;
+  },
+
+  // =========================================================
+  // 0b. DML DINÂMICO — estilos e render dos cards do admin
   // =========================================================
   _dmlStyleAdmin: {
     DML_COMERCIAL: { label: "Comercial",  icon: "store" },
@@ -56,6 +87,9 @@ export const UI = {
   // 1. INICIALIZAÇÃO (LISTENERS)
   // =========================================================
   init() {
+    // Atualiza o label "há X min" a cada 60s
+    setInterval(() => this.atualizarLabelUltimaAtualizacao(), 60_000);
+
     const buscaPedidos = document.getElementById("inputBuscaPedidos");
     if (buscaPedidos) {
       buscaPedidos.addEventListener("input", (e) => {
@@ -253,7 +287,7 @@ export const UI = {
     if (window.lucide) window.lucide.createIcons();
   },
 
-  // Ícones por DML
+  // Estilos conhecidos por DML — para DMLs novos cai no fallback dinâmico
   _dmlConfig: {
     "DML_COMERCIAL":  { icon: "shopping-bag", label: "Comercial",  cor: "text-purple-600 bg-purple-50 border-purple-200" },
     "DML_OFICINA":    { icon: "wrench",       label: "Oficina",    cor: "text-orange-600 bg-orange-50 border-orange-200" },
@@ -261,6 +295,22 @@ export const UI = {
     "DML_VESTIARIO":  { icon: "shirt",        label: "Vestiário",  cor: "text-pink-600 bg-pink-50 border-pink-200" },
     "DML_ESTOQUE":    { icon: "warehouse",    label: "Estoque",    cor: "text-amber-600 bg-amber-50 border-amber-200" },
     "DML_CCB":        { icon: "building-2",   label: "CCB",        cor: "text-teal-600 bg-teal-50 border-teal-200" },
+  },
+  _coresFallbackDml: [
+    "text-rose-600 bg-rose-50 border-rose-200",
+    "text-violet-600 bg-violet-50 border-violet-200",
+    "text-cyan-600 bg-cyan-50 border-cyan-200",
+    "text-indigo-600 bg-indigo-50 border-indigo-200",
+    "text-fuchsia-600 bg-fuchsia-50 border-fuchsia-200",
+    "text-lime-600 bg-lime-50 border-lime-200",
+  ],
+  _getDmlCfg(dml) {
+    if (this._dmlConfig[dml]) return this._dmlConfig[dml];
+    const sufixo = String(dml || "").replace(/^DML_/, "").replace(/_/g, " ").toLowerCase();
+    const label = sufixo ? sufixo.replace(/\b\w/g, (c) => c.toUpperCase()) : dml;
+    const hash = [...String(dml || "")].reduce((h, c) => h + c.charCodeAt(0), 0);
+    const cor = this._coresFallbackDml[hash % this._coresFallbackDml.length];
+    return { icon: "layers", label, cor };
   },
 
   _renderizarAgrupadoPorDML(dados, container) {
@@ -272,12 +322,17 @@ export const UI = {
       grupos[dml].push(p);
     });
 
-    // Ordem fixa dos DMLs
-    const ordemDML = ["DML_COMERCIAL", "DML_OFICINA", "DML_INDUSTRIA", "DML_VESTIARIO", "DML_ESTOQUE", "DML_CCB"];
-    const chaves = [...ordemDML.filter(k => grupos[k]), ...Object.keys(grupos).filter(k => !ordemDML.includes(k))];
+    // Ordem dinâmica: usa State.dmlsDisponiveis se carregado, senão os conhecidos
+    const ordemBase = (State.dmlsDisponiveis && State.dmlsDisponiveis.length)
+      ? State.dmlsDisponiveis
+      : Object.keys(this._dmlConfig);
+    const chaves = [
+      ...ordemBase.filter((k) => grupos[k]),
+      ...Object.keys(grupos).filter((k) => !ordemBase.includes(k)),
+    ];
 
     chaves.forEach(dml => {
-      const cfg = this._dmlConfig[dml] || { icon: "package", label: dml.replace("DML_", "").replace("_", " "), cor: "text-gray-600 bg-gray-50 border-gray-200" };
+      const cfg = this._getDmlCfg(dml);
       const pedidos = grupos[dml];
 
       // Header da seção
@@ -286,8 +341,8 @@ export const UI = {
       secao.innerHTML = `
         <div class="flex items-center gap-3 mb-4 mt-6 first:mt-0">
           <div class="flex items-center gap-2.5 px-4 py-2 rounded-xl border ${cfg.cor}">
-            <i data-lucide="${cfg.icon}" class="w-4 h-4"></i>
-            <span class="text-xs font-black uppercase tracking-wider">${cfg.label}</span>
+            <i data-lucide="${this._escHtml(cfg.icon)}" class="w-4 h-4"></i>
+            <span class="text-xs font-black uppercase tracking-wider">${this._escHtml(cfg.label)}</span>
           </div>
           <span class="text-[10px] font-bold text-gray-400 bg-gray-100 px-2 py-1 rounded-lg">${pedidos.length} pedido${pedidos.length > 1 ? 's' : ''}</span>
           <div class="flex-1 h-px bg-gray-100"></div>
@@ -351,14 +406,19 @@ export const UI = {
         : "--:--";
       const dataFormatada = p.dt.split(" ")[0];
 
-      // DML badge para cards de material (quando não está agrupado)
-      const dmlCfg = this._dmlConfig[p.local] || null;
+      // DML badge para cards de material (quando não está agrupado) — usa fallback dinâmico
+      const dmlCfg = (p.local && p.local.startsWith("DML_")) ? this._getDmlCfg(p.local) : null;
       const dmlBadge = (!isEPI && dmlCfg && this._categoriaAtiva !== "MATERIAL")
-        ? `<span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded ${dmlCfg.cor}">${dmlCfg.label}</span>`
+        ? `<span class="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded ${dmlCfg.cor}">${this._escHtml(dmlCfg.label)}</span>`
         : "";
 
+      const idEsc = this._escHtml(p.id);
+      const nomeEsc = this._escHtml(p.nome);
+      const matEsc = this._escHtml(p.mat);
+      const opcEsc = this._escHtml(p.opc);
+
       card.innerHTML = `
-                <div id="card-bar-${p.id}" class="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${cardBarClass}"></div>
+                <div id="card-bar-${idEsc}" class="absolute left-0 top-0 bottom-0 w-1 rounded-l-2xl ${cardBarClass}"></div>
 
                 <div class="flex items-center gap-4 mb-4">
                     <div class="relative flex-shrink-0">
@@ -372,10 +432,10 @@ export const UI = {
                         </div>
                     </div>
                     <div class="flex-1 min-w-0">
-                        <h3 class="text-sm font-extrabold uppercase text-gray-900 leading-tight line-clamp-2">${p.nome}</h3>
+                        <h3 class="text-sm font-extrabold uppercase text-gray-900 leading-tight line-clamp-2">${nomeEsc}</h3>
                         <div class="flex items-center gap-1.5 mt-1">
-                            <span class="text-[10px] font-semibold text-gray-500">MAT: ${p.mat}</span>
-                            ${p.id ? `<span class="text-[9px] text-gray-300">•</span><span class="text-[10px] font-mono text-gray-400">#${p.id}</span>` : ""}
+                            <span class="text-[10px] font-semibold text-gray-500">MAT: ${matEsc}</span>
+                            ${p.id ? `<span class="text-[9px] text-gray-300">•</span><span class="text-[10px] font-mono text-gray-400">#${idEsc}</span>` : ""}
                             ${dmlBadge}
                         </div>
                     </div>
@@ -383,7 +443,7 @@ export const UI = {
 
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-2">
-                        <span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-lg border ${color} tracking-wide">${p.opc}</span>
+                        <span class="text-[9px] font-black uppercase px-2.5 py-1 rounded-lg border ${color} tracking-wide">${opcEsc}</span>
                     </div>
                     <div class="flex items-center gap-3">
                         <div class="flex items-center gap-1 text-gray-400">
@@ -2231,10 +2291,13 @@ export const UI = {
             </div>
             <div class="flex items-center justify-between mb-4 gap-2">
                  <div class="relative group flex-1">
-                    <input id="inputBuscaContencao" type="text" placeholder="Filtrar item..." class="w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl p-3 pl-10 text-sm font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:bg-white transition-all placeholder-zinc-400">
+                    <input id="inputBuscaContencao" type="text" placeholder="Filtrar item..." class="w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl p-3 pl-10 pr-10 text-sm font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:bg-white transition-all placeholder-zinc-400">
                     <div class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-[#F40009] transition-colors">
                         <i data-lucide="search" class="w-4 h-4"></i>
                     </div>
+                    <button id="btnLimparBuscaContencao" type="button" class="hidden absolute right-2 top-1/2 -translate-y-1/2 w-7 h-7 rounded-lg bg-zinc-100 hover:bg-[#F40009] hover:text-white text-zinc-500 flex items-center justify-center transition-all cursor-pointer" title="Limpar filtro">
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
                  </div>
                  <button onclick="UI.abrirCadastroContencao()" class="h-12 px-4 rounded-2xl bg-zinc-900 text-white flex items-center gap-2 hover:bg-[#F40009] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex-shrink-0" title="Adicionar Produto">
                     <i data-lucide="plus" class="w-4 h-4"></i>
@@ -2254,11 +2317,23 @@ export const UI = {
       didOpen: () => {
         window.lucide.createIcons();
         const input = document.getElementById("inputBuscaContencao");
+        const btnLimpar = document.getElementById("btnLimparBuscaContencao");
         if (input) {
           input.focus();
-          input.addEventListener("input", (e) =>
-            this.filtrarContencao(e.target.value)
-          );
+          const sync = () => {
+            this.filtrarContencao(input.value);
+            if (btnLimpar) btnLimpar.classList.toggle("hidden", !input.value);
+          };
+          input.addEventListener("input", sync);
+        }
+        if (btnLimpar) {
+          btnLimpar.addEventListener("click", () => {
+            if (input) {
+              input.value = "";
+              input.dispatchEvent(new Event("input"));
+              input.focus();
+            }
+          });
         }
       },
     });

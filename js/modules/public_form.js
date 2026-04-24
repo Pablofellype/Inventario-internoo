@@ -1,6 +1,7 @@
 import { State } from '../core/state.js';
 import { Api } from '../services/api.js';
 import { Cache } from '../services/cache.js';
+import { Regras } from './regras.js';
 
 export const PublicForm = {
     dadosPedido: {
@@ -332,7 +333,14 @@ export const PublicForm = {
         if (!State.dmlsDisponiveis || !State.dmlsDisponiveis.length) {
             const area = document.getElementById("areaEtapas");
             if (area) {
-                area.innerHTML = `<div class="text-center py-16 sm:py-20"><div class="w-12 h-12 border-[3px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin mx-auto"></div><p class="mt-5 text-[11px] font-black uppercase text-zinc-400 tracking-widest">Carregando DMLs...</p></div>`;
+                area.innerHTML = `
+                    <div class="py-6 sm:py-10 flex flex-col items-center gap-6">
+                        ${Regras.render({ intervalo: 4500 })}
+                        <div class="flex items-center gap-2.5 mt-2">
+                            <div class="w-5 h-5 border-[2.5px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin"></div>
+                            <p class="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Carregando locais...</p>
+                        </div>
+                    </div>`;
             }
             try { await Api.carregarDmlsDisponiveis(); } catch {}
         }
@@ -378,7 +386,14 @@ export const PublicForm = {
     async renderizarSelecaoProdutos(categoriaID) {
         this.atualizarProgresso(5);
         const area = document.getElementById("areaEtapas");
-        area.innerHTML = `<div class="text-center py-16 sm:py-20"><div class="w-12 h-12 border-[3px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin mx-auto"></div><p class="mt-5 text-[11px] font-black uppercase text-zinc-400 tracking-widest">Carregando Itens...</p></div>`;
+        area.innerHTML = `
+            <div class="py-6 sm:py-10 flex flex-col items-center gap-6">
+                ${Regras.render({ intervalo: 4500 })}
+                <div class="flex items-center gap-2.5 mt-2">
+                    <div class="w-5 h-5 border-[2.5px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin"></div>
+                    <p class="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Carregando itens...</p>
+                </div>
+            </div>`;
 
         // Sempre busca dados frescos da planilha para garantir atualizações
         await Api.preCarregarTudo();

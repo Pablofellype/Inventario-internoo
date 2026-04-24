@@ -59,6 +59,7 @@ export const Search = {
 
             suggestions.push({
                 icon: "package",
+                foto: item.f || "",
                 title: item.root,
                 subtitle: "Abrir produto",
                 action: () => {
@@ -84,17 +85,21 @@ export const Search = {
             return;
         }
 
-        resBox.innerHTML = items.map((item, i) => `
+        const escTxt = (s) => String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        resBox.innerHTML = items.map((item, i) => {
+            const visual = item.foto
+                ? `<div class="spotlight-icon-box shadow-sm overflow-hidden bg-white p-1"><img src="${escTxt(item.foto)}" class="w-full h-full object-contain rounded-lg" alt="${escTxt(item.title)}" onerror="this.style.display='none';this.parentElement.innerHTML='<i data-lucide=\\'${item.icon}\\' class=\\'w-5 h-5 text-gray-400\\'></i>';if(window.lucide)window.lucide.createIcons();"></div>`
+                : `<div class="spotlight-icon-box shadow-sm"><i data-lucide="${item.icon}" class="w-5 h-5 text-gray-400"></i></div>`;
+            return `
             <div class="spotlight-item animate-entrada-suave" style="animation-delay: ${i * 0.05}s">
-                <div class="spotlight-icon-box shadow-sm">
-                    <i data-lucide="${item.icon}" class="w-5 h-5 text-gray-400"></i>
-                </div>
+                ${visual}
                 <div class="text-left text-zinc-900">
-                    <p class="text-sm font-black text-gray-900 text-left">${item.title}</p>
-                    <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest text-left">${item.subtitle}</p>
+                    <p class="text-sm font-black text-gray-900 text-left">${escTxt(item.title)}</p>
+                    <p class="text-[10px] uppercase font-bold text-gray-400 tracking-widest text-left">${escTxt(item.subtitle)}</p>
                 </div>
             </div>
-        `).join("");
+            `;
+        }).join("");
 
         // Adiciona eventos de clique
         const els = resBox.querySelectorAll(".spotlight-item");

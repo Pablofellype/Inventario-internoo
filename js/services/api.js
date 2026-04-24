@@ -21,6 +21,9 @@ export const Api = {
       (key) => key !== "COLABORADORES"
     );
 
+    // Invalida cache em memória — preCarregarTudo é o "refresh master"
+    this._dmlSCache = null;
+
     const promessas = setores.map(async (cat) => {
       try {
         const gid = settings.mapeamento[cat];
@@ -43,8 +46,9 @@ export const Api = {
 
         await Cache.salvar(cat, dadosProcessados);
 
-        // Se for o DML_S, desdobra em caches individuais por DML
+        // Se for o DML_S, popula cache em memória + desdobra em caches individuais por DML
         if (cat === "DML_S") {
+          this._dmlSCache = { csv, t: Date.now(), itens: dadosProcessados };
           const dmlsSet = new Set();
           const porDml = new Map();
           dadosProcessados.forEach((item) => {
@@ -55,6 +59,7 @@ export const Api = {
             });
           });
           State.dmlsDisponiveis = Array.from(dmlsSet).sort();
+          State.ultimaAtualizacao = Date.now();
           await Promise.all(
             Array.from(porDml.entries()).map(([dml, itens]) =>
               Cache.salvar(dml, itens)
@@ -99,16 +104,31 @@ export const Api = {
   },
 
   // =========================================================
-  // 1b. CARREGA SÓ OS DMLs DISPONÍVEIS (rápido)
+  // 1b. CACHE EM MEMÓRIA + HELPER ÚNICO PARA O DML_S
   // =========================================================
+  _dmlSCache: null, // { csv, t, itens }
+
+  async _fetchDmlSCsv() {
+    const TTL = 60_000; // 60 segundos
+    if (this._dmlSCache && Date.now() - this._dmlSCache.t < TTL) {
+      return this._dmlSCache;
+    }
+    const gid = settings.mapeamento["DML_S"];
+    if (!gid) return null;
+    const url = `${settings.baseDados}&gid=${gid}&t=${Date.now()}`;
+    const res = await fetch(url);
+    const csv = await res.text();
+    const itens = this.processarCSV(csv);
+    this._dmlSCache = { csv, t: Date.now(), itens };
+    return this._dmlSCache;
+  },
+
+  // Carrega só os DMLs disponíveis (usa cache em memória, populado pelo helper)
   async carregarDmlsDisponiveis() {
     try {
-      const gid = settings.mapeamento["DML_S"];
-      if (!gid) return;
-      const url = `${settings.baseDados}&gid=${gid}&t=${Date.now()}`;
-      const res = await fetch(url);
-      const csv = await res.text();
-      const itens = this.processarCSV(csv);
+      const cache = await this._fetchDmlSCsv();
+      if (!cache) return;
+      const itens = cache.itens;
       const dmlsSet = new Set();
       const porDml = new Map();
       itens.forEach((item) => {
@@ -431,24 +451,26 @@ export const Api = {
       if (navigator.onLine) {
         const cat = State.categoriaAtual;
         const isDmlIndividual = cat && cat.startsWith("DML_") && cat !== "DML_S";
-        const gidAlvo = isDmlIndividual
-          ? settings.mapeamento["DML_S"]
-          : settings.mapeamento[cat];
-        if (!gidAlvo) return;
-        const url = `${settings.baseDados}&gid=${gidAlvo}&t=${Date.now()}`;
-        const res = await fetch(url);
-        const csv = await res.text();
 
-        if (cat === "EPI_UNIFORME") {
-          State.ativos = EpiParser.parse(csv);
-        } else if (isDmlIndividual) {
-          // Filtra itens da planilha DML_S onde a coluna DMLS contém o DML selecionado
-          const todos = this.processarCSV(csv);
-          State.ativos = todos.filter(
+        if (isDmlIndividual) {
+          // Reutiliza cache em memória do DML_S (60s TTL) — evita refetch redundante
+          const cache = await this._fetchDmlSCsv();
+          if (!cache) return;
+          State.ativos = cache.itens.filter(
             (item) => (item._dmls || []).includes(cat)
           );
         } else {
-          State.ativos = this.processarCSV(csv);
+          const gidAlvo = settings.mapeamento[cat];
+          if (!gidAlvo) return;
+          const url = `${settings.baseDados}&gid=${gidAlvo}&t=${Date.now()}`;
+          const res = await fetch(url);
+          const csv = await res.text();
+
+          if (cat === "EPI_UNIFORME") {
+            State.ativos = EpiParser.parse(csv);
+          } else {
+            State.ativos = this.processarCSV(csv);
+          }
         }
 
         Cache.salvar(cat, State.ativos);

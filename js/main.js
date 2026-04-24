@@ -11,6 +11,7 @@ import { Search } from "./modules/search.js";
 import { UI } from "./modules/ui.js";
 import { Api } from "./services/api.js";
 import { PublicForm } from "./modules/public_form.js";
+import { Regras } from "./modules/regras.js";
 
 // IMPORTANTE: Expor a UI globalmente para os botões do Popup de Contenção funcionarem
 window.UI = UI;
@@ -237,15 +238,16 @@ window.Sistema = {
     Swal.fire({
       title: "",
       html: `
-        <div class="flex flex-col items-center py-2">
-          <div class="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
-            <div class="w-6 h-6 border-[3px] border-zinc-600 border-t-white rounded-full animate-spin"></div>
+        <div class="flex flex-col items-center py-2 gap-5">
+          ${Regras.render({ intervalo: 4500 })}
+          <div class="flex items-center gap-2.5 mt-2">
+            <div class="w-5 h-5 border-[2.5px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin"></div>
+            <p class="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Consultando histórico...</p>
           </div>
-          <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Buscando...</h3>
-          <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.15em] mt-1">Consultando histórico no servidor</p>
         </div>`,
       allowOutsideClick: false,
       showConfirmButton: false,
+      width: window.innerWidth < 640 ? "95%" : "520px",
       customClass: { popup: "swal2-popup-custom" },
     });
 
@@ -322,6 +324,38 @@ window.Sistema = {
   preCarregarTudo: async () => {
     await Api.preCarregarTudo();
     if (UI.renderizarCardsDmlAdmin) UI.renderizarCardsDmlAdmin();
+    if (UI.atualizarLabelUltimaAtualizacao) UI.atualizarLabelUltimaAtualizacao();
+  },
+
+  // Recarrega tudo da planilha sob demanda (botão Atualizar Dados)
+  atualizarDados: async () => {
+    const btn = document.getElementById("btnAtualizarDados");
+    const icon = btn ? btn.querySelector("[data-lucide='refresh-cw']") : null;
+    if (icon) icon.classList.add("animate-spin");
+    if (btn) btn.disabled = true;
+    try {
+      // Invalida cache em memória do DML_S para forçar fetch novo
+      if (Api._dmlSCache) Api._dmlSCache = null;
+      await Api.preCarregarTudo();
+      if (UI.renderizarCardsDmlAdmin) UI.renderizarCardsDmlAdmin();
+      if (UI.atualizarLabelUltimaAtualizacao) UI.atualizarLabelUltimaAtualizacao();
+      if (UI.renderizarEstoque && State.categoriaAtual && State.categoriaAtual !== "HOME") {
+        UI.renderizarEstoque();
+      }
+      if (window.Swal) {
+        const Toast = Swal.mixin({ toast: true, position: "top-end", showConfirmButton: false, timer: 2200, timerProgressBar: true });
+        Toast.fire({ icon: "success", title: "Dados atualizados" });
+      }
+    } catch (e) {
+      console.error("Falha ao atualizar:", e);
+      if (window.Swal) {
+        const Toast = Swal.mixin({ toast: true, position: "top-end", showConfirmButton: false, timer: 3000 });
+        Toast.fire({ icon: "error", title: "Falha ao atualizar — verifique a conexão" });
+      }
+    } finally {
+      if (icon) icon.classList.remove("animate-spin");
+      if (btn) btn.disabled = false;
+    }
   },
 
   // Filtro de Datas
