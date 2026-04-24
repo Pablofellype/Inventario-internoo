@@ -1996,11 +1996,20 @@ export const UI = {
     }
 
     Swal.fire({
-      title: "Carregando Estoque...",
-      didOpen: () => Swal.showLoading(),
+      html: `
+        <div class="flex flex-col items-center justify-center py-6">
+          <div class="relative w-14 h-14 mb-5">
+            <div class="absolute inset-0 rounded-full border-[3px] border-zinc-100"></div>
+            <div class="absolute inset-0 rounded-full border-[3px] border-transparent border-t-[#F40009] animate-spin"></div>
+          </div>
+          <p class="text-sm font-black uppercase tracking-wider text-zinc-900">Carregando Estoque</p>
+          <p class="mt-1 text-[10px] font-bold uppercase tracking-widest text-zinc-400">Aguarde alguns segundos</p>
+        </div>
+      `,
+      showConfirmButton: false,
       allowOutsideClick: false,
-      background: "#fff",
-      color: "#000",
+      background: "rgba(255, 255, 255, 0.98)",
+      color: "#111827",
       customClass: { popup: "swal2-popup-custom" },
     });
 
@@ -2027,19 +2036,36 @@ export const UI = {
       ? "MODO ABASTECIMENTO (Adicionar)"
       : "Controle de Estoque (Retirar)";
 
+    const totalItens = this.dadosContencao.length;
+    const totalCriticos = this.dadosContencao.filter(
+      (i) => i.qtd > 0 && i.qtd <= 2
+    ).length;
+
     Swal.fire({
       title: "Contenção Lateral",
       width: larguraPopup,
       html: `
+            <div class="flex items-center justify-center gap-4 -mt-2 mb-4 text-[10px] font-black uppercase tracking-widest">
+                <div class="flex items-center gap-1.5 text-zinc-500">
+                    <span class="w-1.5 h-1.5 rounded-full bg-zinc-300"></span>
+                    <span>${totalItens} ${totalItens === 1 ? "Item" : "Itens"}</span>
+                </div>
+                ${
+                  totalCriticos > 0
+                    ? `<div class="flex items-center gap-1.5 text-red-500"><span class="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse"></span><span>${totalCriticos} Crítico${totalCriticos === 1 ? "" : "s"}</span></div>`
+                    : ""
+                }
+            </div>
             <div class="flex items-center justify-between mb-4 gap-2">
                  <div class="relative group flex-1">
-                    <input id="inputBuscaContencao" type="text" placeholder="Filtrar item..." class="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl p-3 pl-10 text-sm font-bold text-gray-900 outline-none focus:border-red-500 transition-all uppercase placeholder-gray-300">
-                    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-red-500 transition-colors">
+                    <input id="inputBuscaContencao" type="text" placeholder="Filtrar item..." class="w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl p-3 pl-10 text-sm font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:bg-white transition-all placeholder-zinc-400">
+                    <div class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 group-focus-within:text-[#F40009] transition-colors">
                         <i data-lucide="search" class="w-4 h-4"></i>
                     </div>
                  </div>
-                 <button onclick="UI.abrirCadastroContencao()" class="w-12 h-12 rounded-2xl bg-gray-100 text-gray-500 flex items-center justify-center hover:scale-105 transition-all" title="Adicionar Produto">
-                    <i data-lucide="plus" class="w-5 h-5"></i>
+                 <button onclick="UI.abrirCadastroContencao()" class="h-12 px-4 rounded-2xl bg-zinc-900 text-white flex items-center gap-2 hover:bg-[#F40009] hover:scale-[1.02] active:scale-[0.98] transition-all shadow-sm flex-shrink-0" title="Adicionar Produto">
+                    <i data-lucide="plus" class="w-4 h-4"></i>
+                    <span class="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Adicionar Produto</span>
                  </button>
             </div>
             <div id="listaContencao" class="${estiloModo} p-2 sm:p-4 rounded-[2rem] max-h-[60vh] overflow-y-auto custom-scroll border-2 transition-colors">
@@ -2088,17 +2114,40 @@ export const UI = {
     const escolha = await Swal.fire({
       title: "Adicionar Produto",
       html: `
-        <div class="grid grid-cols-1 gap-3 mt-4">
-          <button id="btnAddExistente" class="w-full bg-gray-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] shadow-lg">Somar em existente</button>
-          <button id="btnAddNovo" class="w-full bg-white text-zinc-800 py-4 rounded-2xl font-black uppercase tracking-widest text-[10px] border-2 border-gray-100">Novo produto</button>
+        <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 -mt-2 mb-5">Selecione como deseja adicionar</p>
+        <div class="grid grid-cols-1 gap-3">
+          <button id="btnAddExistente" class="group w-full p-4 bg-white border-2 border-zinc-200 rounded-2xl flex items-center gap-3.5 hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer active:scale-[0.97] text-left">
+            <div class="w-11 h-11 bg-zinc-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-[#F40009] group-hover:scale-110 transition-all">
+              <i data-lucide="layers" class="w-5 h-5 text-zinc-600 group-hover:text-white transition-colors"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-black uppercase text-zinc-900 group-hover:text-[#F40009] transition-colors">Somar em Existente</p>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-0.5">Acrescentar quantidade a um item</p>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-[#F40009] transition-colors"></i>
+          </button>
+          <button id="btnAddNovo" class="group w-full p-4 bg-white border-2 border-zinc-200 rounded-2xl flex items-center gap-3.5 hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer active:scale-[0.97] text-left">
+            <div class="w-11 h-11 bg-zinc-100 rounded-xl flex items-center justify-center flex-shrink-0 group-hover:bg-[#F40009] group-hover:scale-110 transition-all">
+              <i data-lucide="plus-circle" class="w-5 h-5 text-zinc-600 group-hover:text-white transition-colors"></i>
+            </div>
+            <div class="flex-1">
+              <p class="text-sm font-black uppercase text-zinc-900 group-hover:text-[#F40009] transition-colors">Novo Produto</p>
+              <p class="text-[10px] font-bold uppercase tracking-wider text-zinc-400 mt-0.5">Cadastrar um item inédito</p>
+            </div>
+            <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-300 group-hover:text-[#F40009] transition-colors"></i>
+          </button>
         </div>
+        <button id="btnVoltarContencao" class="mt-5 w-full py-3.5 rounded-2xl bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black uppercase tracking-widest text-[11px] transition-all flex items-center justify-center gap-2">
+          <i data-lucide="arrow-left" class="w-4 h-4"></i>
+          <span>Voltar</span>
+        </button>
       `,
       showConfirmButton: false,
-      showCancelButton: true,
-      cancelButtonText: "Voltar",
+      showCancelButton: false,
       showCloseButton: true,
       customClass: { popup: "swal2-popup-custom" },
       didOpen: () => {
+        window.lucide.createIcons();
         document
           .getElementById("btnAddExistente")
           .addEventListener("click", () => {
@@ -2109,10 +2158,21 @@ export const UI = {
           Swal.close();
           this.abrirCadastroContencaoNovo();
         });
+        document
+          .getElementById("btnVoltarContencao")
+          .addEventListener("click", () => {
+            Swal.close();
+            this.abrirContencaoLateral(false);
+          });
       },
     });
 
-    if (escolha.isDismissed && escolha.dismiss === Swal.DismissReason.cancel) {
+    if (
+      escolha.isDismissed &&
+      (escolha.dismiss === Swal.DismissReason.cancel ||
+        escolha.dismiss === Swal.DismissReason.close ||
+        escolha.dismiss === Swal.DismissReason.backdrop)
+    ) {
       this.abrirContencaoLateral(false);
     }
     return escolha;
@@ -2210,9 +2270,15 @@ export const UI = {
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Adicionar",
-      confirmButtonColor: "#16a34a",
       cancelButtonText: "Voltar",
-      customClass: { popup: "swal2-popup-custom" },
+      reverseButtons: true,
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal2-popup-custom",
+        confirmButton: "bg-[#F40009] hover:bg-[#900005] text-white font-black uppercase text-[11px] tracking-widest px-6 py-3 rounded-2xl transition-all shadow-md",
+        cancelButton: "bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black uppercase text-[11px] tracking-widest px-6 py-3 rounded-2xl transition-all mr-2",
+        actions: "gap-0 mt-2",
+      },
       preConfirm: () => {
         const qtdStr = document.getElementById("contencao-qtd-existente").value;
         const quantidade = parseInt(qtdStr, 10);
@@ -2241,27 +2307,34 @@ export const UI = {
     const result = await Swal.fire({
       title: "Novo Produto",
       html: `
+        <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-400 -mt-2 mb-5">Preencha os dados do item</p>
         <div class="space-y-3 text-left">
           <div>
-            <label class="text-[9px] font-black uppercase text-gray-400 ml-1 italic">Material*</label>
-            <input id="contencao-material" class="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl p-3 text-sm font-bold text-gray-900 outline-none focus:border-red-500 transition-all uppercase" placeholder="Ex: Bota de Seguranca">
+            <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Material*</label>
+            <input id="contencao-material" class="mt-1.5 w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl p-3.5 text-sm font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:bg-white transition-all uppercase placeholder-zinc-300" placeholder="Ex: Bota de Segurança">
           </div>
           <div>
-            <label class="text-[9px] font-black uppercase text-gray-400 ml-1 italic">Tamanho (opcional)</label>
-            <input id="contencao-tamanho" class="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl p-3 text-sm font-bold text-gray-900 outline-none focus:border-red-500 transition-all uppercase" placeholder="Ex: 38 ou P">
+            <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Tamanho (opcional)</label>
+            <input id="contencao-tamanho" class="mt-1.5 w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl p-3.5 text-sm font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:bg-white transition-all uppercase placeholder-zinc-300" placeholder="Ex: 38 ou P">
           </div>
           <div>
-            <label class="text-[9px] font-black uppercase text-gray-400 ml-1 italic">Quantidade para adicionar*</label>
-            <input id="contencao-qtd" type="number" min="1" value="1" class="w-full bg-gray-50 border-2 border-gray-100 rounded-2xl p-3 text-sm font-bold text-gray-900 outline-none focus:border-red-500 transition-all">
+            <label class="text-[10px] font-black uppercase tracking-widest text-zinc-500 ml-1">Quantidade*</label>
+            <input id="contencao-qtd" type="number" min="1" value="1" class="mt-1.5 w-full bg-zinc-50 border-2 border-zinc-100 rounded-2xl p-3.5 text-sm font-bold text-zinc-900 outline-none focus:border-[#F40009] focus:bg-white transition-all">
           </div>
         </div>
       `,
       focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: "Adicionar",
-      confirmButtonColor: "#16a34a",
       cancelButtonText: "Voltar",
-      customClass: { popup: "swal2-popup-custom" },
+      reverseButtons: true,
+      buttonsStyling: false,
+      customClass: {
+        popup: "swal2-popup-custom",
+        confirmButton: "bg-[#F40009] hover:bg-[#900005] text-white font-black uppercase text-[11px] tracking-widest px-6 py-3 rounded-2xl transition-all shadow-md",
+        cancelButton: "bg-zinc-100 hover:bg-zinc-200 text-zinc-700 font-black uppercase text-[11px] tracking-widest px-6 py-3 rounded-2xl transition-all mr-2",
+        actions: "gap-0 mt-2",
+      },
       preConfirm: () => {
         const material = document
           .getElementById("contencao-material")
@@ -2450,53 +2523,57 @@ export const UI = {
         const idUnico = `item-${index}`;
         const isDisabled = !this.modoAbastecimento && item.qtd <= 0;
 
+        const badgeCritico =
+          !this.modoAbastecimento && isLow && item.qtd > 0
+            ? '<span class="inline-flex items-center gap-1 text-[8px] font-black px-1.5 py-0.5 rounded-md bg-red-500 text-white uppercase tracking-widest animate-pulse"><span class="w-1 h-1 rounded-full bg-white"></span>Crítico</span>'
+            : "";
+
         return `
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3 bg-white border border-gray-100 rounded-3xl shadow-sm mb-3 gap-3 relative overflow-hidden transition-all hover:shadow-md">
-                ${
-                  !this.modoAbastecimento && isLow && item.qtd > 0
-                    ? '<div class="absolute top-0 right-0 bg-red-500 text-white text-[8px] font-black px-2 py-0.5 rounded-bl-xl z-10">CRÍTICO</div>'
-                    : ""
-                }
-                
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between p-3 bg-white border border-zinc-100 rounded-3xl shadow-sm mb-3 gap-3 relative overflow-hidden transition-all hover:shadow-md hover:border-red-200 hover:-translate-y-0.5 duration-200">
                 <div class="flex items-center gap-3">
                     <button onclick="UI.alternarAlertaContencao('${item.material}', '${item.tamanho || ""}', ${item.alerta ? "true" : "false"})" class="w-8 h-8 rounded-xl flex items-center justify-center border ${
           item.alerta
             ? "bg-red-100 border-red-200 text-red-600"
-            : "bg-white border-gray-100 text-gray-300 hover:text-red-400"
-        } shadow-sm transition-all" title="Alerta de crÃ­tico">
+            : "bg-white border-zinc-100 text-zinc-300 hover:text-red-400 hover:border-red-200"
+        } shadow-sm transition-all flex-shrink-0" title="Alerta de crítico">
                         <i data-lucide="bell" class="w-4 h-4"></i>
                     </button>
-                    <img src="${fotoUrl}" class="w-14 h-14 rounded-2xl object-cover border border-gray-100 shadow-sm flex-shrink-0">
+                    <img src="${fotoUrl}" class="w-14 h-14 rounded-2xl object-cover border border-zinc-100 shadow-sm flex-shrink-0">
                     <div class="text-left flex-1 min-w-0">
-                        <p class="text-xs font-black uppercase text-zinc-900 leading-tight mb-0.5 line-clamp-2">${
+                        <p class="text-xs font-black uppercase text-zinc-900 leading-tight mb-1 line-clamp-2">${
                           item.material
                         }</p>
-                        <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest bg-gray-50 inline-block px-1.5 py-0.5 rounded-md border border-gray-100">${
-                          item.tamanho
-                        }</p>
+                        <div class="flex items-center gap-1.5 flex-wrap">
+                          ${
+                            item.tamanho
+                              ? `<span class="text-[9px] font-black text-zinc-500 uppercase tracking-widest bg-zinc-100 inline-block px-2 py-0.5 rounded-full">${item.tamanho}</span>`
+                              : ""
+                          }
+                          ${badgeCritico}
+                        </div>
                     </div>
                 </div>
-                
-                <div class="flex flex-row items-center justify-between gap-2 border-t sm:border-t-0 border-gray-50 pt-2 sm:pt-0">
-                    <div class="flex items-center gap-2 bg-gray-50 rounded-xl p-1 border border-gray-100">
-                        <button onclick="UI.ajustarQtd('${idUnico}', -1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-red-500 font-bold disabled:opacity-50" ${
+
+                <div class="flex flex-row items-center justify-between gap-2 border-t sm:border-t-0 border-zinc-50 pt-2 sm:pt-0">
+                    <div class="flex items-center gap-2 bg-zinc-50 rounded-xl p-1 border border-zinc-100">
+                        <button onclick="UI.ajustarQtd('${idUnico}', -1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-zinc-600 hover:text-[#F40009] font-bold transition-colors disabled:opacity-50" ${
           isDisabled ? "disabled" : ""
-        }>-</button>
+        }>−</button>
                         <span id="label-${idUnico}" class="text-xs font-black w-6 text-center text-zinc-900">1</span>
-                        <button onclick="UI.ajustarQtd('${idUnico}', 1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-gray-600 hover:text-green-500 font-bold" ${
+                        <button onclick="UI.ajustarQtd('${idUnico}', 1)" class="w-8 h-8 flex items-center justify-center bg-white rounded-lg shadow-sm text-zinc-600 hover:text-emerald-600 font-bold transition-colors" ${
           isDisabled ? "disabled" : ""
         }>+</button>
                     </div>
 
-                    <div class="flex flex-col items-end gap-1">
+                    <div class="flex flex-col items-end gap-1.5">
                         <span class="text-[9px] font-black px-2 py-0.5 rounded-md border ${corQtd}">Estoque: ${
           item.qtd
         }</span>
-                        <button 
+                        <button
                             onclick="UI.baixarEstoque('${item.material}', '${
           item.tamanho
-        }', parseInt(document.getElementById('label-${idUnico}').innerText))" 
-                            class="px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${btnClass}"
+        }', parseInt(document.getElementById('label-${idUnico}').innerText))"
+                            class="px-5 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${btnClass}"
                             ${isDisabled ? "disabled" : ""}
                         >
                             ${btnText}

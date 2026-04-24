@@ -305,7 +305,8 @@ export const PublicForm = {
             { id: "DML_ESTOQUE", nome: "DML Estoque", icon: "package", cor: "bg-amber-50 text-amber-500" },
             { id: "DML_CCB", nome: "DML CCB", icon: "building-2", cor: "bg-purple-50 text-purple-500" },
             { id: "DML_INDUSTRIA", nome: "DML Indústria", icon: "factory", cor: "bg-emerald-50 text-emerald-500" },
-            { id: "DML_OFICINA", nome: "DML Oficina", icon: "wrench", cor: "bg-orange-50 text-orange-500" }
+            { id: "DML_OFICINA", nome: "DML Oficina", icon: "wrench", cor: "bg-orange-50 text-orange-500" },
+            { id: "DML_VESTIARIO", nome: "DML Vestiário", icon: "shirt", cor: "bg-pink-50 text-pink-500" }
         ];
         const botoes = locais.map((l, i) => `
             <button onclick="PublicForm.finalizarDML('${l.id}')" class="group w-full p-4 bg-white border-2 border-zinc-200 rounded-xl flex items-center gap-3.5 hover:border-[#F40009] hover:bg-red-50/30 transition-all duration-200 cursor-pointer active:scale-[0.97] opacity-0 animate-fade-up" style="animation-delay: ${0.12 + i * 0.06}s">
