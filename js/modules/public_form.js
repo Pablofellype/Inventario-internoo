@@ -21,9 +21,12 @@ export const PublicForm = {
         if (!State.colaboradores || State.colaboradores.length === 0) {
             Api.carregarColaboradores();
         }
-        document.getElementById("telaLogin").classList.add("hidden");
-        document.getElementById("containerFormularioPublico").classList.remove("hidden");
-        this.renderizarEtapa1();
+        // 1ª vez na sessão: mostra splash com Regras de Ouro. Depois só abre direto.
+        Regras.splash(() => {
+            document.getElementById("telaLogin").classList.add("hidden");
+            document.getElementById("containerFormularioPublico").classList.remove("hidden");
+            this.renderizarEtapa1();
+        });
     },
 
     fechar() {
@@ -47,6 +50,11 @@ export const PublicForm = {
         const area = document.getElementById("areaEtapas");
         area.innerHTML = `
         <div>
+            <!-- Banner Regras de Ouro -->
+            <div class="mb-5 opacity-0 animate-fade-up" style="animation-delay: 0.02s">
+                ${Regras.renderBanner()}
+            </div>
+
             <!-- Avatar centralizado -->
             <div class="flex justify-center mb-6 opacity-0 animate-scale-in">
                 <div class="relative">
@@ -333,14 +341,7 @@ export const PublicForm = {
         if (!State.dmlsDisponiveis || !State.dmlsDisponiveis.length) {
             const area = document.getElementById("areaEtapas");
             if (area) {
-                area.innerHTML = `
-                    <div class="py-6 sm:py-10 flex flex-col items-center gap-6">
-                        ${Regras.render({ intervalo: 4500 })}
-                        <div class="flex items-center gap-2.5 mt-2">
-                            <div class="w-5 h-5 border-[2.5px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin"></div>
-                            <p class="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Carregando locais...</p>
-                        </div>
-                    </div>`;
+                area.innerHTML = `<div class="text-center py-16 sm:py-20"><div class="w-12 h-12 border-[3px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin mx-auto"></div><p class="mt-5 text-[11px] font-black uppercase text-zinc-400 tracking-widest">Carregando locais...</p></div>`;
             }
             try { await Api.carregarDmlsDisponiveis(); } catch {}
         }
@@ -386,14 +387,7 @@ export const PublicForm = {
     async renderizarSelecaoProdutos(categoriaID) {
         this.atualizarProgresso(5);
         const area = document.getElementById("areaEtapas");
-        area.innerHTML = `
-            <div class="py-6 sm:py-10 flex flex-col items-center gap-6">
-                ${Regras.render({ intervalo: 4500 })}
-                <div class="flex items-center gap-2.5 mt-2">
-                    <div class="w-5 h-5 border-[2.5px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin"></div>
-                    <p class="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Carregando itens...</p>
-                </div>
-            </div>`;
+        area.innerHTML = `<div class="text-center py-16 sm:py-20"><div class="w-12 h-12 border-[3px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin mx-auto"></div><p class="mt-5 text-[11px] font-black uppercase text-zinc-400 tracking-widest">Carregando itens...</p></div>`;
 
         // Sempre busca dados frescos da planilha para garantir atualizações
         await Api.preCarregarTudo();

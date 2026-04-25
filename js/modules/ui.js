@@ -2,6 +2,7 @@ import { State } from "../core/state.js";
 import { settings } from "../config/settings.js";
 import Auth from "../core/auth.js";
 import { Api } from "../services/api.js";
+import { Regras } from "./regras.js";
 
 export const UI = {
   // Cache local para a busca interna
@@ -558,7 +559,10 @@ export const UI = {
                         <div class="flex items-center gap-4">
                             <img src="${urlAvatar}" class="w-14 h-14 rounded-[18px] border-2 border-[#e5e7eb] object-cover" style="box-shadow: 0 4px 10px rgba(0,0,0,0.1);" alt="Foto" onerror="this.src='${fallbackAvatar}';this.onerror=null;">
                             <div class="flex-1 min-w-0">
-                                <h2 class="text-[15px] font-black uppercase leading-tight text-[#111827]" style="font-family:'Inter',sans-serif;">${p.nome}</h2>
+                                <h2 onclick="UI.verHistoricoEpiColaborador('${p.mat}', '${p.nome.replace(/'/g, "\\'")}')" class="text-[15px] font-black uppercase leading-tight text-[#111827] cursor-pointer hover:text-[#F40009] transition-colors flex items-center gap-1.5 group" style="font-family:'Inter',sans-serif;" title="Ver histórico EPI/Uniforme deste colaborador">
+                                    <span>${p.nome}</span>
+                                    <i data-lucide="history" class="w-3.5 h-3.5 text-zinc-300 group-hover:text-[#F40009] transition-colors"></i>
+                                </h2>
                                 <div class="flex items-center gap-2 mt-1.5">
                                     <span class="w-2 h-2 rounded-full ${statusDotClass} flex-shrink-0"></span>
                                     <span class="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wide">${statusAtual}</span>
@@ -889,9 +893,15 @@ export const UI = {
   // 6. RASTREAMENTO PÚBLICO
   // =========================================================
   abrirPopupRastreio() {
+    // 1ª vez: splash. Depois abre direto.
+    Regras.splash(() => this._abrirPopupRastreioReal());
+  },
+
+  _abrirPopupRastreioReal() {
     Swal.fire({
       html: `
         <div style="font-family: 'Space Grotesk', sans-serif;">
+            <div class="mb-4">${Regras.renderBanner()}</div>
             <div class="text-center mb-6">
                 <div class="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
                     <i data-lucide="radar" class="w-6 h-6 text-white"></i>
@@ -923,11 +933,10 @@ export const UI = {
       background: "#fff",
       padding: "1.5rem",
       customClass: { popup: "swal2-popup-custom" },
-      width: window.innerWidth < 640 ? "92%" : "400px",
+      width: window.innerWidth < 640 ? "95%" : "520px",
       didOpen: () => {
         if (window.lucide) window.lucide.createIcons();
         const input = document.getElementById("inputRastreio");
-        input.focus();
         input.addEventListener("keydown", (e) => {
           if (e.key === "Enter") {
             const val = input.value;
@@ -942,6 +951,37 @@ export const UI = {
 
   mostrarResultadoUnico(p) {
     this.abrirDetalhesPedido(p);
+  },
+
+  // Abre histórico filtrado SÓ EPI/Uniforme do colaborador (a partir do popup do pedido)
+  async verHistoricoEpiColaborador(matricula, nome) {
+    Swal.fire({
+      title: "",
+      html: `
+        <div class="flex flex-col items-center py-2">
+          <div class="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <div class="w-6 h-6 border-[3px] border-zinc-600 border-t-white rounded-full animate-spin"></div>
+          </div>
+          <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Buscando histórico</h3>
+          <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.15em] mt-1">${this._escHtml(nome || matricula)} · EPI/Uniforme</p>
+        </div>`,
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      customClass: { popup: "swal2-popup-custom" },
+    });
+
+    try {
+      const todos = await Api.buscarHistoricoUnificado(matricula);
+      // Filtra somente EPI/Uniforme — ignora pedidos de DML/Material
+      const apenasEpi = (todos || []).filter((p) => {
+        const tipo = String(p.opc || "").toUpperCase();
+        return tipo.includes("EPI") || tipo.includes("UNIFORME");
+      });
+      this.mostrarHistoricoUsuario(apenasEpi);
+    } catch (e) {
+      console.error("Erro ao buscar histórico EPI:", e);
+      this.mostrarHistoricoUsuario([]);
+    }
   },
 
   mostrarHistoricoUsuario(lista) {

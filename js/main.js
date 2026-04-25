@@ -238,16 +238,15 @@ window.Sistema = {
     Swal.fire({
       title: "",
       html: `
-        <div class="flex flex-col items-center py-2 gap-5">
-          ${Regras.render({ intervalo: 4500 })}
-          <div class="flex items-center gap-2.5 mt-2">
-            <div class="w-5 h-5 border-[2.5px] border-zinc-100 border-t-[#F40009] rounded-full animate-spin"></div>
-            <p class="text-[10px] font-black uppercase text-zinc-400 tracking-widest">Consultando histórico...</p>
+        <div class="flex flex-col items-center py-2">
+          <div class="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mb-4 shadow-lg">
+            <div class="w-6 h-6 border-[3px] border-zinc-600 border-t-white rounded-full animate-spin"></div>
           </div>
+          <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Buscando...</h3>
+          <p class="text-[10px] text-zinc-400 font-bold uppercase tracking-[0.15em] mt-1">Consultando histórico no servidor</p>
         </div>`,
       allowOutsideClick: false,
       showConfirmButton: false,
-      width: window.innerWidth < 640 ? "95%" : "520px",
       customClass: { popup: "swal2-popup-custom" },
     });
 
