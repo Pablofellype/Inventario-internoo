@@ -169,12 +169,15 @@ export const Api = {
               /,(?=(?:(?:[^"]*"){2})*[^"]*$)|;(?=(?:(?:[^"]*"){2})*[^"]*$)/
             )
             .map((c) => c.replace(/^["']|["']$/g, "").trim());
+          const statusRaw = (col[5] || "TRUE").toUpperCase().trim();
+          const ativo = statusRaw !== "FALSE";
           return {
             matricula: col[0],
             nome: col[1],
             equipe: col[2] || "DIURNO",
             imagem: col[3] || "",
             numero: col[4] || "",
+            status: ativo,
           };
         })
         .filter((c) => c.nome && c.matricula);
@@ -422,6 +425,87 @@ export const Api = {
     } catch (e) {
       console.error("Erro ao adicionar/atualizar contencao:", e);
       return { success: false, msg: "Erro de conexÃ£o" };
+    }
+  },
+
+  // =========================================================
+  // 3.4. ADICIONAR COLABORADOR (Painel Admin)
+  // =========================================================
+  async adicionarColaborador(matricula, nome, equipe) {
+    if (!settings.urlApiEnvio) return { success: false, msg: "URL não configurada" };
+
+    try {
+      const response = await fetch(settings.urlApiEnvio, {
+        method: "POST",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          acao: "adicionarColaborador",
+          matricula: String(matricula).trim(),
+          nome: String(nome).trim(),
+          equipe: String(equipe).trim(),
+        }),
+      });
+
+      const dados = await response.json();
+      return {
+        success: dados.result === "success",
+        msg: dados.msg || "",
+      };
+    } catch (e) {
+      console.error("Erro ao adicionar colaborador:", e);
+      return { success: false, msg: "Erro de conexão" };
+    }
+  },
+
+  // =========================================================
+  // 3.5. ALTERAR STATUS COLABORADOR (Ativar/Desativar)
+  // =========================================================
+  async alterarStatusColaborador(matricula, novoStatus) {
+    if (!settings.urlApiEnvio) return { success: false, msg: "URL não configurada" };
+
+    try {
+      const response = await fetch(settings.urlApiEnvio, {
+        method: "POST",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          acao: "alterarStatusColaborador",
+          matricula: String(matricula).trim(),
+          status: novoStatus ? "TRUE" : "FALSE",
+        }),
+      });
+
+      const dados = await response.json();
+      return { success: dados.result === "success", msg: dados.msg || "" };
+    } catch (e) {
+      console.error("Erro ao alterar status colaborador:", e);
+      return { success: false, msg: "Erro de conexão" };
+    }
+  },
+
+  // =========================================================
+  // 3.6. EXCLUIR COLABORADOR
+  // =========================================================
+  async excluirColaborador(matricula) {
+    if (!settings.urlApiEnvio) return { success: false, msg: "URL não configurada" };
+
+    try {
+      const response = await fetch(settings.urlApiEnvio, {
+        method: "POST",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({
+          acao: "excluirColaborador",
+          matricula: String(matricula).trim(),
+        }),
+      });
+
+      const dados = await response.json();
+      return { success: dados.result === "success", msg: dados.msg || "" };
+    } catch (e) {
+      console.error("Erro ao excluir colaborador:", e);
+      return { success: false, msg: "Erro de conexão" };
     }
   },
 

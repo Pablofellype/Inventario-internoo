@@ -211,6 +211,80 @@ function doPost(e) {
 
     return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Item não encontrado"})).setMimeType(ContentService.MimeType.JSON);
   }
+  // --------------------------------------------------------
+  // CENÁRIO 9: ADICIONAR COLABORADOR (Painel Admin)
+  // --------------------------------------------------------
+  else if (data.acao === "adicionarColaborador") {
+    var sheetColab = ss.getSheetByName("COLABORADORES");
+    if (!sheetColab) return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Aba COLABORADORES não existe"})).setMimeType(ContentService.MimeType.JSON);
+
+    var matricula = String(data.matricula || "").trim();
+    var nome = String(data.nome || "").trim().toUpperCase();
+    var equipe = String(data.equipe || "").trim().toUpperCase();
+
+    if (!matricula || !nome || !equipe) {
+      return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Preencha todos os campos"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // Verifica duplicidade de matrícula
+    var dados = sheetColab.getDataRange().getValues();
+    for (var i = 1; i < dados.length; i++) {
+      if (String(dados[i][0]).trim() === matricula) {
+        return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Matrícula já cadastrada"})).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    sheetColab.appendRow([matricula, nome, equipe, "", "", "TRUE"]);
+    return ContentService.createTextOutput(JSON.stringify({"result":"success", "msg": "Colaborador adicionado"})).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // --------------------------------------------------------
+  // CENÁRIO 10: ALTERAR STATUS DO COLABORADOR (Ativar/Desativar)
+  // --------------------------------------------------------
+  else if (data.acao === "alterarStatusColaborador") {
+    var sheetColab = ss.getSheetByName("COLABORADORES");
+    if (!sheetColab) return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Aba COLABORADORES não existe"})).setMimeType(ContentService.MimeType.JSON);
+
+    var matricula = String(data.matricula || "").trim();
+    var novoStatus = data.status === true || data.status === "TRUE" ? "TRUE" : "FALSE";
+
+    if (!matricula) {
+      return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Matrícula inválida"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var dados = sheetColab.getDataRange().getValues();
+    for (var i = 1; i < dados.length; i++) {
+      if (String(dados[i][0]).trim() === matricula) {
+        sheetColab.getRange(i + 1, 6).setValue(novoStatus);
+        return ContentService.createTextOutput(JSON.stringify({"result":"success", "msg": "Status alterado", "status": novoStatus})).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Matrícula não encontrada"})).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // --------------------------------------------------------
+  // CENÁRIO 11: EXCLUIR COLABORADOR
+  // --------------------------------------------------------
+  else if (data.acao === "excluirColaborador") {
+    var sheetColab = ss.getSheetByName("COLABORADORES");
+    if (!sheetColab) return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Aba COLABORADORES não existe"})).setMimeType(ContentService.MimeType.JSON);
+
+    var matricula = String(data.matricula || "").trim();
+
+    if (!matricula) {
+      return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Matrícula inválida"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    var dados = sheetColab.getDataRange().getValues();
+    for (var i = 1; i < dados.length; i++) {
+      if (String(dados[i][0]).trim() === matricula) {
+        sheetColab.deleteRow(i + 1);
+        return ContentService.createTextOutput(JSON.stringify({"result":"success", "msg": "Colaborador excluído"})).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Matrícula não encontrada"})).setMimeType(ContentService.MimeType.JSON);
+  }
+
   // Fallback: se vier sem "acao" mas com dados da contenção, trata como adicionar/atualizar
   else if (!data.acao && (data.material || data.tamanho || data.quantidade !== undefined)) {
     return handleAdicionarOuAtualizarContencao(ss, data);

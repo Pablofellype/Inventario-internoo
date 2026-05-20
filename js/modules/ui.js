@@ -2704,6 +2704,24 @@ export const UI = {
 
   async alternarAlertaContencao(material, tamanho, atual) {
     const novo = !atual;
+
+    // Mostra spinner no botao clicado
+    const allBtns = document.querySelectorAll("#listaContencao button");
+    let btnAlvo = null;
+    allBtns.forEach((btn) => {
+      if (btn.getAttribute("onclick") &&
+          btn.getAttribute("onclick").includes("alternarAlertaContencao") &&
+          btn.getAttribute("onclick").includes(material)) {
+        btnAlvo = btn;
+      }
+    });
+    let htmlOriginal = "";
+    if (btnAlvo) {
+      htmlOriginal = btnAlvo.innerHTML;
+      btnAlvo.disabled = true;
+      btnAlvo.innerHTML = '<div class="w-4 h-4 border-2 border-zinc-300 border-t-red-500 rounded-full animate-spin"></div>';
+    }
+
     const res = await Api.atualizarAlertaContencao(material, tamanho, novo);
     if (res.success) {
       const item = this.dadosContencao.find(
@@ -2713,7 +2731,22 @@ export const UI = {
       );
       if (item) item.alerta = novo;
       this.renderizarCriticosContencao();
-      this.abrirContencaoLateral(false);
+
+      // Atualiza lista dentro do popup sem fechar/reabrir
+      const listaEl = document.getElementById("listaContencao");
+      const buscaEl = document.getElementById("inputBuscaContencao");
+      if (listaEl) {
+        const filtroAtual = buscaEl ? buscaEl.value.toUpperCase() : "";
+        const dadosFiltrados = filtroAtual
+          ? this.dadosContencao.filter((i) => {
+              const mat = i.material ? String(i.material).toUpperCase() : "";
+              const tam = i.tamanho ? String(i.tamanho).toUpperCase() : "";
+              return mat.includes(filtroAtual) || tam.includes(filtroAtual);
+            })
+          : this.dadosContencao;
+        listaEl.innerHTML = this.renderizarListaContencao(dadosFiltrados);
+        if (window.lucide) window.lucide.createIcons();
+      }
     } else {
       Swal.fire({
         icon: "error",
@@ -2736,7 +2769,7 @@ export const UI = {
 
     if (criticos.length === 0) {
       container.innerHTML =
-        '<p class="text-xs text-gray-400">Nenhum item crÃ­tico.</p>';
+        '<p class="text-xs text-gray-400">Nenhum item em estado cr\u00edtico no momento.</p>';
       return;
     }
 
@@ -2979,6 +3012,355 @@ export const UI = {
         icon: "error",
         title: "Erro ao desfazer",
         text: res.msg,
+        customClass: { popup: "swal2-popup-custom" },
+      });
+    }
+  },
+
+  // =========================================================
+  // GESTÃO DE COLABORADORES (Painel Admin)
+  // =========================================================
+  _equipesColaboradores: [
+    "EQUIPE CONSERVACAO E LIMPEZA - NOTURNO",
+    "EQUIPE CONSERVAÇÃO E LIMPEZA - DIURNO",
+    "EQUIPE CONSERVACAO E LIMPEZA SIA",
+    "EQUIPE SEGURANÇA NOTURNO",
+    "EQUIPE SEGURANCA SIA - NOTURNO",
+    "EQUIPE SEGURANÇA DIURNO",
+  ],
+
+  _filtroColaboradores: "",
+
+  renderizarColaboradoresAdmin() {
+    const grid = document.getElementById("gradeAtivos");
+    const vazio = document.getElementById("vazio");
+    if (vazio) vazio.classList.add("hidden");
+    if (!grid) return;
+
+    const lista = State.colaboradores || [];
+    const filtro = (this._filtroColaboradores || "").toUpperCase();
+    const filtrados = filtro
+      ? lista.filter(
+          (c) =>
+            c.nome.toUpperCase().includes(filtro) ||
+            c.matricula.toUpperCase().includes(filtro) ||
+            (c.equipe || "").toUpperCase().includes(filtro)
+        )
+      : lista;
+
+    grid.innerHTML = `
+      <div class="col-span-full space-y-4 animate-entrada-suave">
+        <!-- Barra de ações -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          <div class="flex-1 relative">
+            <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400 pointer-events-none"></i>
+            <input type="text" id="buscaColaborador" placeholder="Buscar por nome, matrícula ou equipe..."
+              value="${this._escHtml(this._filtroColaboradores)}"
+              onkeyup="UI.filtrarColaboradoresAdmin(this.value)"
+              class="w-full bg-white border border-zinc-200 py-3 pl-10 pr-4 rounded-xl outline-none focus:border-zinc-400 focus:bg-white transition-all text-xs font-medium text-zinc-900" />
+          </div>
+          <button onclick="UI.abrirModalAdicionarColaborador()"
+            class="flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[10px] font-black uppercase tracking-wider text-white border-none cursor-pointer active:scale-[0.97] transition-all shadow-md"
+            style="background: linear-gradient(135deg, #F40009 0%, #900005 100%);">
+            <i data-lucide="user-plus" class="w-4 h-4"></i>
+            Novo Colaborador
+          </button>
+        </div>
+
+        <!-- Contador -->
+        <div class="flex items-center gap-2">
+          <span class="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+            ${filtrados.length} colaborador${filtrados.length !== 1 ? "es" : ""} ${filtro ? "encontrado" + (filtrados.length !== 1 ? "s" : "") : "cadastrado" + (filtrados.length !== 1 ? "s" : "")}
+          </span>
+        </div>
+
+        <!-- Lista de Colaboradores -->
+        <div class="space-y-2">
+          ${
+            filtrados.length === 0
+              ? '<div class="bg-white border border-zinc-100 rounded-2xl p-10 text-center shadow-[0_2px_15px_rgba(0,0,0,0.04)]"><i data-lucide="users" class="w-12 h-12 text-zinc-200 mx-auto mb-3"></i><p class="text-xs text-zinc-400 font-bold uppercase">Nenhum colaborador encontrado</p></div>'
+              : filtrados.map((c, i) => this._renderCardColaborador(c, i)).join("")
+          }
+        </div>
+      </div>
+    `;
+
+    if (window.lucide) window.lucide.createIcons();
+  },
+
+  _renderCardColaborador(c, i) {
+    const ativo = c.status !== false;
+    const matEsc = this._escHtml(c.matricula);
+    const nomeEsc = this._escHtml(c.nome);
+    const equipeEsc = this._escHtml(c.equipe || "---");
+    const avatarUrl = c.imagem
+      ? this._escHtml(c.imagem)
+      : "https://ui-avatars.com/api/?name=" + encodeURIComponent(c.nome) + "&background=F40009&color=fff&bold=true&size=128";
+
+    const borderClass = ativo ? "border-zinc-100" : "border-red-100";
+    const opacityClass = ativo ? "" : "opacity-50";
+    const imgBorder = ativo ? "border-white shadow-md" : "border-zinc-200 grayscale";
+    const dotColor = ativo ? "bg-emerald-400" : "bg-red-400";
+    const nameClass = ativo ? "text-zinc-900" : "text-zinc-400 line-through";
+    const equipeColor = ativo ? "text-zinc-400" : "text-zinc-300";
+    const badgeClass = ativo
+      ? "bg-emerald-50 text-emerald-600 border border-emerald-200"
+      : "bg-red-50 text-red-500 border border-red-200";
+    const badgeDot = ativo ? "bg-emerald-500" : "bg-red-400";
+    const badgeText = ativo ? "Ativo" : "Inativo";
+    const btnClass = ativo
+      ? "bg-amber-50 text-amber-600 border-amber-200 hover:bg-amber-100 hover:scale-110"
+      : "bg-emerald-50 text-emerald-600 border-emerald-200 hover:bg-emerald-100 hover:scale-110";
+    const btnIcon = ativo ? "user-x" : "user-check";
+    const btnTitle = ativo ? "Desativar" : "Reativar";
+    const toggleVal = ativo ? "false" : "true";
+    const delay = (i * 0.03).toFixed(2);
+
+    return '<div class="bg-white border ' + borderClass + ' rounded-2xl px-4 py-3 flex items-center gap-4 group hover:shadow-md transition-all shadow-[0_2px_10px_rgba(0,0,0,0.03)] ' + opacityClass + '" style="animation: cardSlideUp 0.4s cubic-bezier(0.16,1,0.3,1) forwards; animation-delay: ' + delay + 's; opacity: 0;">'
+      + '<div class="relative flex-shrink-0">'
+      + '<img src="' + avatarUrl + '" alt="' + nomeEsc + '" class="w-11 h-11 rounded-full object-cover border-2 ' + imgBorder + '" />'
+      + '<div class="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full border-2 border-white ' + dotColor + '"></div>'
+      + '</div>'
+      + '<div class="flex-1 min-w-0">'
+      + '<div class="flex items-center gap-2 mb-0.5">'
+      + '<h4 class="text-xs font-black uppercase ' + nameClass + ' truncate">' + nomeEsc + '</h4>'
+      + '<span class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[9px] font-black tracking-wide bg-zinc-100 text-zinc-500 flex-shrink-0">' + matEsc + '</span>'
+      + '</div>'
+      + '<p class="text-[10px] font-bold ' + equipeColor + ' uppercase tracking-wide truncate">' + equipeEsc + '</p>'
+      + '</div>'
+      + '<span class="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[9px] font-black uppercase tracking-wider flex-shrink-0 ' + badgeClass + '">'
+      + '<span class="w-1.5 h-1.5 rounded-full ' + badgeDot + '"></span>'
+      + badgeText
+      + '</span>'
+      + '<button onclick="UI.toggleStatusColaborador(\'' + matEsc + '\', ' + toggleVal + ')" class="w-9 h-9 rounded-xl flex items-center justify-center transition-all cursor-pointer border flex-shrink-0 ' + btnClass + ' active:scale-95" title="' + btnTitle + '">'
+      + '<i data-lucide="' + btnIcon + '" class="w-4 h-4"></i>'
+      + '</button>'
+      + '</div>';
+  },
+
+  filtrarColaboradoresAdmin(termo) {
+    this._filtroColaboradores = termo || "";
+    this.renderizarColaboradoresAdmin();
+  },
+
+  abrirModalAdicionarColaborador() {
+    const opcoesEquipe = this._equipesColaboradores
+      .map((eq) => `<option value="${eq}">${eq}</option>`)
+      .join("");
+
+    Swal.fire({
+      title: "",
+      html: `
+        <div class="text-left">
+          <div class="flex items-center gap-3 mb-6">
+            <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center border border-blue-100">
+              <i data-lucide="user-plus" class="w-5 h-5 text-blue-500"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Novo Colaborador</h3>
+              <p class="text-[10px] text-zinc-400 font-bold">Preencha os dados abaixo</p>
+            </div>
+          </div>
+
+          <div class="space-y-4">
+            <div>
+              <label class="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5">Matrícula</label>
+              <input type="text" id="swal-matricula" placeholder="Ex: 12345"
+                class="w-full bg-zinc-50 border border-zinc-200 py-3 px-4 rounded-xl outline-none focus:border-zinc-400 text-sm font-bold text-zinc-900" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5">Nome Completo</label>
+              <input type="text" id="swal-nome" placeholder="Ex: João da Silva"
+                class="w-full bg-zinc-50 border border-zinc-200 py-3 px-4 rounded-xl outline-none focus:border-zinc-400 text-sm font-bold text-zinc-900" />
+            </div>
+            <div>
+              <label class="block text-[10px] font-black uppercase tracking-widest text-zinc-500 mb-1.5">Equipe</label>
+              <select id="swal-equipe"
+                class="w-full bg-zinc-50 border border-zinc-200 py-3 px-4 rounded-xl outline-none focus:border-zinc-400 text-sm font-bold text-zinc-900 cursor-pointer">
+                <option value="">Selecione a equipe...</option>
+                ${opcoesEquipe}
+              </select>
+            </div>
+          </div>
+        </div>
+      `,
+      showCancelButton: true,
+      confirmButtonText: "CADASTRAR",
+      cancelButtonText: "CANCELAR",
+      confirmButtonColor: "#F40009",
+      cancelButtonColor: "#71717a",
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => {
+        if (window.lucide) window.lucide.createIcons();
+      },
+      preConfirm: () => {
+        const matricula = document.getElementById("swal-matricula").value.trim();
+        const nome = document.getElementById("swal-nome").value.trim();
+        const equipe = document.getElementById("swal-equipe").value;
+
+        if (!matricula || !nome || !equipe) {
+          Swal.showValidationMessage("Preencha todos os campos");
+          return false;
+        }
+        return { matricula, nome, equipe };
+      },
+    }).then(async (result) => {
+      if (!result.isConfirmed) return;
+
+      const { matricula, nome, equipe } = result.value;
+
+      Swal.fire({
+        title: "",
+        html: `
+          <div class="flex flex-col items-center py-4">
+            <div class="w-12 h-12 border-4 border-zinc-200 border-t-red-600 rounded-full animate-spin mb-4"></div>
+            <p class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cadastrando...</p>
+          </div>`,
+        allowOutsideClick: false,
+        showConfirmButton: false,
+        customClass: { popup: "swal2-popup-custom" },
+      });
+
+      const res = await Api.adicionarColaborador(matricula, nome, equipe);
+
+      if (res.success) {
+        // Atualiza lista local
+        State.colaboradores.push({ matricula, nome: nome.toUpperCase(), equipe: equipe.toUpperCase(), status: true, imagem: "", numero: "" });
+
+        Swal.fire({
+          icon: "success",
+          title: "Cadastrado!",
+          text: `${nome.toUpperCase()} adicionado com sucesso.`,
+          timer: 2000,
+          showConfirmButton: false,
+          customClass: { popup: "swal2-popup-custom" },
+        });
+
+        this.renderizarColaboradoresAdmin();
+      } else {
+        Swal.fire({
+          icon: "error",
+          title: "Erro",
+          text: res.msg || "Falha ao cadastrar colaborador.",
+          confirmButtonColor: "#F40009",
+          customClass: { popup: "swal2-popup-custom" },
+        });
+      }
+    });
+  },
+
+  async toggleStatusColaborador(matricula, novoStatus) {
+    const ativar = novoStatus === true || novoStatus === "true";
+    const acao = ativar ? "reativar" : "desativar";
+
+    const confirm = await Swal.fire({
+      title: "",
+      html: `
+        <div class="flex flex-col items-center py-2">
+          <div class="w-14 h-14 ${ativar ? "bg-emerald-50 border-emerald-100" : "bg-amber-50 border-amber-100"} rounded-2xl flex items-center justify-center mb-4 border-2">
+            <i data-lucide="${ativar ? "user-check" : "user-x"}" class="w-6 h-6 ${ativar ? "text-emerald-500" : "text-amber-500"}"></i>
+          </div>
+          <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">${ativar ? "Reativar" : "Desativar"} Colaborador?</h3>
+          <p class="text-[11px] text-zinc-400 font-bold mt-1">Matrícula: <strong>${matricula}</strong></p>
+          ${!ativar ? '<p class="text-[10px] text-amber-600 font-bold mt-2">O colaborador ficará inativo mas permanecerá na lista.</p>' : ""}
+        </div>`,
+      showCancelButton: true,
+      confirmButtonText: ativar ? "REATIVAR" : "DESATIVAR",
+      cancelButtonText: "CANCELAR",
+      confirmButtonColor: ativar ? "#059669" : "#d97706",
+      cancelButtonColor: "#71717a",
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({
+      title: "",
+      html: `<div class="flex flex-col items-center py-4"><div class="w-12 h-12 border-4 border-zinc-200 border-t-red-600 rounded-full animate-spin mb-4"></div><p class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Processando...</p></div>`,
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      customClass: { popup: "swal2-popup-custom" },
+    });
+
+    const res = await Api.alterarStatusColaborador(matricula, ativar);
+
+    if (res.success) {
+      const colab = State.colaboradores.find((c) => c.matricula === matricula);
+      if (colab) colab.status = ativar;
+
+      Swal.fire({
+        icon: "success",
+        title: ativar ? "Reativado!" : "Desativado!",
+        timer: 1500,
+        showConfirmButton: false,
+        customClass: { popup: "swal2-popup-custom" },
+      });
+
+      this.renderizarColaboradoresAdmin();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Erro",
+        text: res.msg || "Falha ao alterar status.",
+        confirmButtonColor: "#F40009",
+        customClass: { popup: "swal2-popup-custom" },
+      });
+    }
+  },
+
+  async confirmarExcluirColaborador(matricula, nome) {
+    const confirm = await Swal.fire({
+      title: "",
+      html: `
+        <div class="flex flex-col items-center py-2">
+          <div class="w-14 h-14 bg-red-50 rounded-2xl flex items-center justify-center mb-4 border-2 border-red-100">
+            <i data-lucide="trash-2" class="w-6 h-6 text-red-500"></i>
+          </div>
+          <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide">Excluir Colaborador?</h3>
+          <p class="text-[11px] text-zinc-400 font-bold mt-1"><strong>${nome}</strong> (${matricula})</p>
+          <p class="text-[10px] text-red-600 font-bold mt-2">Esta ação é permanente e não pode ser desfeita.</p>
+        </div>`,
+      showCancelButton: true,
+      confirmButtonText: "EXCLUIR",
+      cancelButtonText: "CANCELAR",
+      confirmButtonColor: "#dc2626",
+      cancelButtonColor: "#71717a",
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    Swal.fire({
+      title: "",
+      html: `<div class="flex flex-col items-center py-4"><div class="w-12 h-12 border-4 border-zinc-200 border-t-red-600 rounded-full animate-spin mb-4"></div><p class="text-[10px] font-black uppercase tracking-widest text-zinc-500">Excluindo...</p></div>`,
+      allowOutsideClick: false,
+      showConfirmButton: false,
+      customClass: { popup: "swal2-popup-custom" },
+    });
+
+    const res = await Api.excluirColaborador(matricula);
+
+    if (res.success) {
+      State.colaboradores = State.colaboradores.filter((c) => c.matricula !== matricula);
+
+      Swal.fire({
+        icon: "success",
+        title: "Excluído!",
+        text: `${nome} removido com sucesso.`,
+        timer: 1800,
+        showConfirmButton: false,
+        customClass: { popup: "swal2-popup-custom" },
+      });
+
+      this.renderizarColaboradoresAdmin();
+    } else {
+      Swal.fire({
+        icon: "error",
+        title: "Erro",
+        text: res.msg || "Falha ao excluir.",
+        confirmButtonColor: "#F40009",
         customClass: { popup: "swal2-popup-custom" },
       });
     }

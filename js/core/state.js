@@ -9,6 +9,7 @@ export const State = {
     // Dados Carregados (Cache da Sessão)
     ativos: [],       // Lista de produtos carregados do CSV atual
     pedidos: [],      // Lista de pedidos carregados do CSV (para o Monitor)
+    colaboradores: [], // Lista de colaboradores carregados do CSV
     catalogoProdutos: [], // Lista agregada para busca global
     
     // Carrinho de Compras

@@ -133,7 +133,15 @@ export const Navigation = {
         const btnBag = document.getElementById("botaoCarrinho");
 
         // Lógica Específica por Tipo de Setor
-        if (categoriaID === "PEDIDOS_LOG") {
+        if (categoriaID === "COLABORADORES_ADMIN") {
+            monitorFiltros.classList.add("hidden");
+            if (abasCategoria) abasCategoria.classList.add("hidden");
+            btnBag.classList.add("translate-y-48");
+
+            await Api.carregarColaboradores();
+            UI.renderizarColaboradoresAdmin();
+            if (window.lucide) window.lucide.createIcons();
+        } else if (categoriaID === "PEDIDOS_LOG") {
             // É o Monitor de Pedidos
             monitorFiltros.classList.remove("hidden");
             if (abasCategoria) abasCategoria.classList.remove("hidden");

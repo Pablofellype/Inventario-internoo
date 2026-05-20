@@ -170,6 +170,9 @@ window.Sistema = {
   abrirContencaoLateral: () => UI.abrirContencaoLateral(),
   baixarEstoque: (m, t) => UI.baixarEstoque(m, t),
 
+  // --- Colaboradores (Admin) ---
+  abrirModalAdicionarColaborador: () => UI.abrirModalAdicionarColaborador(),
+
   // =================================================================
   // ATUALIZAÇÃO DE STATUS
   // =================================================================
