@@ -204,8 +204,10 @@ window.Sistema = {
         "text-[10px] text-blue-500 mt-2 pl-2 h-4 transition-all animate-pulse font-bold";
     }
 
-    // 2. Chama a API
-    const sucesso = await Api.atualizarStatus(id, novoStatus, codigoSap);
+    // 2. Chama a API (inclui observação se houver)
+    const obsEl = document.getElementById("inputObservacao");
+    const obs = obsEl ? obsEl.value.trim() : undefined;
+    const sucesso = await Api.atualizarStatus(id, novoStatus, codigoSap, obs);
     if (State._statusUpdateToken[id] !== token) return;
 
     // 3. Atualiza Visual Final
@@ -234,8 +236,8 @@ window.Sistema = {
     await Api.atualizarItens(id, novosItens);
   },
 
-  // --- RASTREAMENTO PÚBLICO (CORRIGIDO PARA BUSCAR NO ARQUIVO MORTO) ---
-  abrirRastreio: () => UI.abrirPopupRastreio(),
+  // --- RASTREAMENTO PÚBLICO ---
+  abrirRastreio: () => UI.abrirRastreioPublico(),
 
   processarRastreio: async (termo) => {
     Swal.fire({
@@ -301,6 +303,44 @@ window.Sistema = {
         UI.mostrarHistoricoUsuario([]); // Mostra tela de "nada encontrado" em caso de erro
       }
     }
+  },
+
+  // --- Reservas da Semana (Widget Home) ---
+  atualizarReservasHoje: () => UI.renderizarReservasHoje(),
+  semanaAnterior: () => { UI._semanaOffset--; UI.renderizarReservasHoje(); },
+  semanaSeguinte: () => { if (UI._semanaOffset < 0) { UI._semanaOffset++; UI.renderizarReservasHoje(); } },
+  semanaAtual: () => { UI._semanaOffset = 0; UI.renderizarReservasHoje(); },
+  confirmarRetirada: async (id) => {
+    const { isConfirmed } = await Swal.fire({
+      title: '',
+      html: `<div class="text-center py-2">
+        <div class="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-emerald-100">
+          <i data-lucide="package-check" class="w-7 h-7 text-emerald-500"></i>
+        </div>
+        <h3 class="text-base font-black text-zinc-900 uppercase">Confirmar Retirada?</h3>
+        <p class="text-[11px] text-zinc-400 font-bold mt-1">Pedido <b>#${id}</b> será marcado como <b>RESERVA BAIXADA</b></p>
+      </div>`,
+      showCancelButton: true,
+      confirmButtonColor: "#10b981",
+      confirmButtonText: "SIM, RETIRADO",
+      cancelButtonText: "CANCELAR",
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+    });
+    if (!isConfirmed) return;
+
+    const sucesso = await Api.atualizarStatus(id, "RESERVA BAIXADA", "");
+    if (sucesso) {
+      const pedido = State.pedidos.find(p => p.id == id);
+      if (pedido) pedido.status = "RESERVA BAIXADA";
+      UI.renderizarReservasHoje();
+      const Toast = Swal.mixin({ toast: true, position: "top-end", showConfirmButton: false, timer: 2000 });
+      Toast.fire({ icon: "success", title: "Retirada confirmada!" });
+    }
+  },
+  filtrarReservas: (filtro) => {
+    UI._filtroReservaAtual = filtro;
+    UI.renderizarReservasHoje();
   },
 
   // --- Filtro por Categoria (Monitor) ---

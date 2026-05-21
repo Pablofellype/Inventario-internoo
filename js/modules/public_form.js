@@ -1,6 +1,7 @@
 import { State } from '../core/state.js';
 import { Api } from '../services/api.js';
 import { Cache } from '../services/cache.js';
+import { UI } from './ui.js';
 import { Regras } from './regras.js';
 
 export const PublicForm = {
@@ -378,7 +379,103 @@ export const PublicForm = {
 
     finalizarDML(dml) {
         this.dadosPedido.setorDML = dml;
-        this.renderizarSelecaoProdutos(dml);
+
+        // Mostra reservas existentes da semana para este DML antes de continuar
+        const reservas = UI._getReservasDmlSemana(dml);
+        if (reservas.length > 0) {
+            this._mostrarReservasAntesDeSolicitar(dml, reservas);
+        } else {
+            this.renderizarSelecaoProdutos(dml);
+        }
+    },
+
+    _mostrarReservasAntesDeSolicitar(dml, reservas) {
+        const label = dml.replace("DML_", "").replace(/_/g, " ");
+        const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b"];
+
+        const listaHtml = reservas.map(p => {
+            const statusKey = (p.status || "").toUpperCase();
+            const jaBaixada = statusKey.includes("BAIXADA");
+            const ehAprovada = statusKey.includes("APROVADA") && !statusKey.includes("NÃO");
+
+            let badge, badgeCor;
+            if (jaBaixada) {
+                badge = "RETIRADO"; badgeCor = "bg-emerald-100 text-emerald-700 border-emerald-200";
+            } else if (ehAprovada) {
+                badge = "AGUARDANDO RETIRADA"; badgeCor = "bg-amber-100 text-amber-700 border-amber-200";
+            } else {
+                badge = p.status || "PENDENTE"; badgeCor = "bg-zinc-100 text-zinc-600 border-zinc-200";
+            }
+
+            const hora = p.dt && p.dt.includes(" ") ? p.dt.split(" ")[1].substring(0, 5) : "";
+            let dtP = p.dataObj;
+            if (typeof dtP === "string" || typeof dtP === "number") dtP = new Date(dtP);
+            if (!dtP || !(dtP instanceof Date) || isNaN(dtP.getTime())) {
+                const raw = String(p.dt || "").split(" ")[0];
+                if (raw.includes("/")) { const d = raw.split("/"); dtP = new Date(parseInt(d[2]), parseInt(d[1])-1, parseInt(d[0])); }
+            }
+            const dataCurta = dtP && !isNaN(dtP.getTime()) ? `${diasSemana[dtP.getDay()]} ${String(dtP.getDate()).padStart(2,"0")}/${String(dtP.getMonth()+1).padStart(2,"0")}` : "--";
+            const nome = (p.nome || "").split(" ").slice(0, 2).join(" ");
+
+            // Parse dos itens com status de aprovação
+            const itensRaw = p.its || p.itens || "";
+            const itensArr = itensRaw.split("|").map(i => i.trim()).filter(Boolean);
+            const itensHtml = itensArr.length > 0 ? itensArr.map(item => {
+                const upper = item.toUpperCase();
+                const ehNao = upper.includes("{NAO}");
+                const ehFalta = upper.includes("{FALTA}");
+                const ehOk = upper.includes("{OK}");
+                const limpo = item.replace(/\s*\{[^}]*\}/g, "").replace(/\s*\[\d{4,}\]/g, "").trim();
+                let cor = "text-zinc-600 bg-zinc-100 border-zinc-200";
+                if (ehNao) cor = "text-red-600 bg-red-50 border-red-200 line-through";
+                else if (ehFalta) cor = "text-orange-600 bg-orange-50 border-orange-200";
+                else if (ehOk) cor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+                return `<span class="inline-block text-[9px] font-bold ${cor} px-2 py-0.5 rounded-md mr-1 mb-1 border">${UI._escHtml(limpo)}</span>`;
+            }).join("") : '<span class="text-[9px] text-zinc-400">Sem itens</span>';
+
+            return `<div class="p-3 bg-white rounded-xl border border-zinc-200 mb-2">
+                <div class="flex items-center justify-between mb-2">
+                    <div>
+                        <p class="text-[11px] font-bold text-zinc-900">${UI._escHtml(nome)}</p>
+                        <p class="text-[9px] font-bold text-zinc-400">${dataCurta} ${hora} | #${p.id || "N/A"}</p>
+                    </div>
+                    <span class="text-[8px] font-black uppercase px-2.5 py-1 rounded-lg border ${badgeCor} flex-shrink-0">${badge}</span>
+                </div>
+                <div class="flex flex-wrap">${itensHtml}</div>
+            </div>`;
+        }).join("");
+
+        const area = document.getElementById("areaEtapas");
+        area.innerHTML = `
+            <div class="pb-24">
+                <div class="mb-6 opacity-0 animate-fade-up">
+                    <div class="flex items-center gap-2.5 mb-3">
+                        <div class="h-[2px] w-8 bg-[#F40009] rounded-full"></div>
+                        <span class="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Aten\u00e7\u00e3o</span>
+                    </div>
+                    <h3 class="text-2xl sm:text-3xl font-black text-zinc-900 leading-[0.95] uppercase tracking-tight">Reservas j\u00e1 feitas</h3>
+                    <p class="text-xs text-zinc-400 mt-2">J\u00e1 existem reservas para <b>${UI._escHtml(label)}</b> nesta semana. Verifique antes de solicitar.</p>
+                </div>
+
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-4 mb-5 opacity-0 animate-fade-up" style="animation-delay:0.1s">
+                    <div class="flex items-center gap-2 mb-3">
+                        <i data-lucide="alert-circle" class="w-4 h-4 text-amber-500"></i>
+                        <p class="text-[10px] font-black uppercase text-amber-700 tracking-wider">${reservas.length} reserva${reservas.length > 1 ? "s" : ""} nesta semana</p>
+                    </div>
+                    ${listaHtml}
+                </div>
+
+                <div class="flex flex-col gap-3 opacity-0 animate-fade-up" style="animation-delay:0.2s">
+                    <button onclick="PublicForm.renderizarSelecaoProdutos('${dml}')" class="w-full bg-[#F40009] text-white py-4 rounded-xl font-black uppercase text-xs tracking-widest shadow-lg active:scale-95 transition-all border-none cursor-pointer flex items-center justify-center gap-2">
+                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                        Continuar mesmo assim
+                    </button>
+                    <button onclick="PublicForm.renderizarEtapa4()" class="w-full bg-white border-2 border-zinc-200 text-zinc-500 py-4 rounded-xl font-black uppercase text-xs tracking-widest hover:border-zinc-400 transition-all cursor-pointer">
+                        Voltar
+                    </button>
+                </div>
+            </div>`;
+        if (window.lucide) window.lucide.createIcons();
     },
 
     // =================================================================

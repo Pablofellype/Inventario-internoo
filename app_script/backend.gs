@@ -1,7 +1,9 @@
 // =================================================================================
-// SCRIPT DE BACKEND (SGS 3.2) - VERSÃO CORRIGIDA E FINAL
+// SCRIPT DE BACKEND (SGS 4.0) - VERSÃO COM RASTREIO, OBSERVAÇÕES E RESERVAS
 // - Protege o Cabeçalho (Nunca mais apaga a Linha 1)
 // - Arquiva pedidos com mais de 7 dias exatos
+// - Coluna K = HISTORICO_STATUS (timeline de mudanças)
+// - Coluna L = OBSERVACAO (notas do admin/solicitante)
 // =================================================================================
 
 var SPREADSHEET_ID = "1zLp2sxKWO9z9By3cWlHop3EyUemYep-YyPH92WIxBFQ";
@@ -22,7 +24,7 @@ function doPost(e) {
   }
   
   // --------------------------------------------------------
-  // CENÁRIO 1: ATUALIZAR STATUS (Painel Admin)
+  // CENÁRIO 1: ATUALIZAR STATUS (Painel Admin) — agora grava timeline
   // --------------------------------------------------------
   if (data.acao === "atualizarStatus") {
     var idProcurado = data.id;
@@ -33,8 +35,9 @@ function doPost(e) {
     } else if (novoStatus !== "APROVADA" && novoStatus !== "RESERVA APROVADA" && novoStatus !== "RESERVA BAIXADA") {
       codigoSap = null; // Só grava SAP quando aprovado/baixado
     }
+    garantirColunasExtras(sheet);
     var valores = sheet.getDataRange().getValues();
-    
+
     // Procura o pedido pelo ID na coluna A
     for (var i = 1; i < valores.length; i++) {
       if (valores[i][0].toString() == idProcurado.toString()) {
@@ -42,6 +45,18 @@ function doPost(e) {
         if (codigoSap !== null) {
           sheet.getRange(i + 1, 10).setValue(codigoSap); // Coluna J (CÓDIGO SAP)
         }
+        // Grava na timeline (Coluna K)
+        var historicoAtual = valores[i][10] ? String(valores[i][10]) : "";
+        var agora = Utilities.formatDate(new Date(), "America/Sao_Paulo", "dd/MM/yyyy HH:mm");
+        var novaEntrada = novoStatus + "|" + agora;
+        var historicoNovo = historicoAtual ? historicoAtual + " >> " + novaEntrada : novaEntrada;
+        sheet.getRange(i + 1, 11).setValue(historicoNovo); // Coluna K (HISTORICO_STATUS)
+
+        // Se veio observação junto, grava também
+        if (data.observacao !== undefined && data.observacao !== null) {
+          sheet.getRange(i + 1, 12).setValue(String(data.observacao)); // Coluna L
+        }
+
         return ContentService.createTextOutput(JSON.stringify({"result":"success", "msg": "Status Atualizado"})).setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -87,7 +102,9 @@ function doPost(e) {
             local: linhas[i][6],
             itens: linhas[i][7],
             status: linhas[i][8],
-            codigoSap: linhas[i][9] || ""
+            codigoSap: linhas[i][9] || "",
+            timeline: linhas[i][10] || "",
+            observacao: linhas[i][11] || ""
           });
         }
       }
@@ -106,7 +123,7 @@ function doPost(e) {
     var ultimosPedidos = listaPedidos.slice(0, 5);
 
     return ContentService.createTextOutput(JSON.stringify({
-      "result": "success", 
+      "result": "success",
       "historico": ultimosPedidos
     })).setMimeType(ContentService.MimeType.JSON);
   }
@@ -285,6 +302,120 @@ function doPost(e) {
     return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Matrícula não encontrada"})).setMimeType(ContentService.MimeType.JSON);
   }
 
+  // --------------------------------------------------------
+  // CENÁRIO 12: RASTREAR PEDIDO POR ID (Consulta Pública)
+  // --------------------------------------------------------
+  else if (data.acao === "rastrearPedido") {
+    var idBuscado = String(data.id || "").trim();
+    if (!idBuscado) {
+      return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "ID inválido"})).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    function buscarNaAba(nomeAba) {
+      var aba = ss.getSheetByName(nomeAba);
+      if (!aba) return null;
+      var linhas = aba.getDataRange().getValues();
+      for (var i = 1; i < linhas.length; i++) {
+        if (String(linhas[i][0]).trim() === idBuscado) {
+          return {
+            id: linhas[i][0],
+            data: linhas[i][1],
+            matricula: linhas[i][2],
+            nome: linhas[i][3],
+            equipe: linhas[i][4],
+            tipo: linhas[i][5],
+            local: linhas[i][6],
+            itens: linhas[i][7],
+            status: linhas[i][8],
+            codigoSap: linhas[i][9] || "",
+            timeline: linhas[i][10] || "",
+            observacao: linhas[i][11] || ""
+          };
+        }
+      }
+      return null;
+    }
+
+    var pedido = buscarNaAba("PEDIDOS_LOG") || buscarNaAba("ARQUIVO_MORTO");
+    if (pedido) {
+      return ContentService.createTextOutput(JSON.stringify({"result":"success", "pedido": pedido})).setMimeType(ContentService.MimeType.JSON);
+    }
+    return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Pedido não encontrado"})).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // --------------------------------------------------------
+  // CENÁRIO 13: SALVAR OBSERVAÇÃO
+  // --------------------------------------------------------
+  else if (data.acao === "salvarObservacao") {
+    var idProcurado = String(data.id || "").trim();
+    var obs = String(data.observacao || "");
+    if (!idProcurado) {
+      return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "ID inválido"})).setMimeType(ContentService.MimeType.JSON);
+    }
+    garantirColunasExtras(sheet);
+    var valores = sheet.getDataRange().getValues();
+    for (var i = 1; i < valores.length; i++) {
+      if (String(valores[i][0]).trim() === idProcurado) {
+        sheet.getRange(i + 1, 12).setValue(obs); // Coluna L (OBSERVACAO)
+        return ContentService.createTextOutput(JSON.stringify({"result":"success", "msg": "Observação salva"})).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+    return ContentService.createTextOutput(JSON.stringify({"result":"error", "msg": "Pedido não encontrado"})).setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // --------------------------------------------------------
+  // CENÁRIO 14: BUSCAR RESERVAS DO DIA (Visível para todos)
+  // --------------------------------------------------------
+  else if (data.acao === "buscarReservasDoDia") {
+    var hoje = new Date();
+    hoje.setHours(0, 0, 0, 0);
+    var amanha = new Date(hoje);
+    amanha.setDate(amanha.getDate() + 1);
+
+    var filtroLocal = data.local ? String(data.local).trim().toUpperCase() : null;
+    var reservas = [];
+    var valores = sheet.getDataRange().getValues();
+
+    for (var i = 1; i < valores.length; i++) {
+      var dataPedido = new Date(valores[i][1]);
+      if (isNaN(dataPedido.getTime())) continue;
+
+      // Pedidos de hoje OU com reserva ativa (independente da data)
+      var statusPedido = String(valores[i][8] || "").toUpperCase();
+      var ehReserva = statusPedido.indexOf("RESERVA") >= 0;
+      var ehHoje = dataPedido >= hoje && dataPedido < amanha;
+
+      if (ehHoje || ehReserva) {
+        var localPedido = String(valores[i][6] || "").toUpperCase();
+        if (filtroLocal && localPedido.indexOf(filtroLocal) < 0) continue;
+
+        reservas.push({
+          id: valores[i][0],
+          data: valores[i][1],
+          matricula: valores[i][2],
+          nome: valores[i][3],
+          equipe: valores[i][4],
+          tipo: valores[i][5],
+          local: valores[i][6],
+          itens: valores[i][7],
+          status: valores[i][8],
+          codigoSap: valores[i][9] || "",
+          timeline: valores[i][10] || "",
+          observacao: valores[i][11] || ""
+        });
+      }
+    }
+
+    reservas.sort(function(a, b) {
+      return new Date(b.data) - new Date(a.data);
+    });
+
+    return ContentService.createTextOutput(JSON.stringify({
+      "result": "success",
+      "reservas": reservas
+    })).setMimeType(ContentService.MimeType.JSON);
+  }
+
   // Fallback: se vier sem "acao" mas com dados da contenção, trata como adicionar/atualizar
   else if (!data.acao && (data.material || data.tamanho || data.quantidade !== undefined)) {
     return handleAdicionarOuAtualizarContencao(ss, data);
@@ -306,7 +437,12 @@ function doPost(e) {
     }
     var dataHora = new Date(); // Data/Hora exata do servidor Google
     garantirColunaSap(sheet);
-    
+    garantirColunasExtras(sheet);
+
+    var agora = Utilities.formatDate(dataHora, "America/Sao_Paulo", "dd/MM/yyyy HH:mm");
+    var timelineInicial = "AGUARDANDO LIDERANÇA|" + agora;
+    var observacao = data.observacao || "";
+
     sheet.appendRow([
       data.id,          // A
       dataHora,         // B
@@ -317,9 +453,11 @@ function doPost(e) {
       data.local,       // G
       data.itens,       // H
       "AGUARDANDO LIDERANÇA", // I
-      "" // J (CÓDIGO SAP) - preenchido somente na aprovação
+      "",               // J (CÓDIGO SAP)
+      timelineInicial,  // K (HISTORICO_STATUS)
+      observacao        // L (OBSERVACAO)
     ]);
-    
+
     return ContentService.createTextOutput(JSON.stringify({"result":"success"})).setMimeType(ContentService.MimeType.JSON);
   }
 }
@@ -384,6 +522,18 @@ function garantirColunaSap(aba) {
   var header = aba.getRange(1, 1, 1, lastCol).getValues()[0];
   if (!header[9] || String(header[9]).trim() === "") {
     aba.getRange(1, 10).setValue("CODIGO SAP");
+  }
+}
+
+// Garante colunas K (HISTORICO_STATUS) e L (OBSERVACAO)
+function garantirColunasExtras(aba) {
+  var lastCol = Math.max(12, aba.getLastColumn());
+  var header = aba.getRange(1, 1, 1, lastCol).getValues()[0];
+  if (!header[10] || String(header[10]).trim() === "") {
+    aba.getRange(1, 11).setValue("HISTORICO_STATUS");
+  }
+  if (!header[11] || String(header[11]).trim() === "") {
+    aba.getRange(1, 12).setValue("OBSERVACAO");
   }
 }
 

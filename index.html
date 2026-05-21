@@ -330,6 +330,65 @@
 
           </div>
 
+          <!-- Reservas Hoje + Resumo Diário -->
+          <div class="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-5 mb-8 sm:mb-10">
+
+            <!-- Reservas da Semana -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 flex flex-col h-auto max-h-[400px] relative overflow-hidden hover:border-emerald-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+              <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 mb-4 z-10">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="calendar-range" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-xs sm:text-sm font-black uppercase text-zinc-900 leading-none">Reservas da <span class="text-emerald-600">Semana</span></h3>
+                    <p id="labelSemanaReservas" class="text-zinc-400 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mt-0.5">Carregando...</p>
+                  </div>
+                </div>
+                <div class="flex items-center gap-1 flex-shrink-0">
+                  <button onclick="Sistema.semanaAnterior()" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 hover:bg-emerald-500 hover:text-white transition-all cursor-pointer border-none" title="Semana anterior">
+                    <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="Sistema.semanaAtual()" id="btnSemanaAtual" class="hidden h-7 sm:h-8 px-2 rounded-lg bg-emerald-50 flex items-center justify-center text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all cursor-pointer border border-emerald-200 text-[7px] sm:text-[8px] font-black uppercase" title="Voltar para semana atual">
+                    Hoje
+                  </button>
+                  <button onclick="Sistema.semanaSeguinte()" id="btnSemanaSeguinte" class="hidden w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 hover:bg-emerald-500 hover:text-white transition-all cursor-pointer border-none" title="Semana seguinte">
+                    <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+                  </button>
+                  <button onclick="Sistema.atualizarReservasHoje()" class="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-zinc-50 flex items-center justify-center text-zinc-400 hover:bg-emerald-500 hover:text-white transition-all cursor-pointer border-none" title="Atualizar">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                  </button>
+                </div>
+              </div>
+              <!-- Filtro por DML (dinâmico) -->
+              <div id="filtrosReservasDml" class="flex gap-1.5 mb-3 overflow-x-auto pb-1">
+                <button onclick="Sistema.filtrarReservas('TODOS')" class="filtro-reserva filtro-reserva-ativo text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border transition-all cursor-pointer whitespace-nowrap">Todos</button>
+              </div>
+              <div id="widgetReservasHoje" class="flex-1 overflow-y-auto pr-1 space-y-2 relative z-10 custom-scroll">
+                <p class="text-xs text-zinc-400 animate-pulse mt-4">Carregando reservas...</p>
+              </div>
+            </div>
+
+            <!-- Resumo Semanal -->
+            <div class="bg-white p-4 sm:p-5 rounded-2xl border border-zinc-100 flex flex-col h-auto relative overflow-hidden hover:border-violet-200 transition-all shadow-[0_2px_15px_rgba(0,0,0,0.04)]">
+              <div class="flex justify-between items-center mb-4 z-10">
+                <div class="flex items-center gap-2">
+                  <div class="w-7 h-7 sm:w-8 sm:h-8 bg-violet-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 sm:w-4 sm:h-4 text-violet-500"></i>
+                  </div>
+                  <div>
+                    <h3 class="text-xs sm:text-sm font-black uppercase text-zinc-900 leading-none">Resumo <span class="text-violet-600">Semanal</span></h3>
+                    <p class="text-zinc-400 text-[8px] sm:text-[9px] font-bold uppercase tracking-wider mt-0.5">Visão geral da semana</p>
+                  </div>
+                </div>
+              </div>
+              <div id="widgetResumoDiario" class="space-y-3">
+                <p class="text-xs text-zinc-400 animate-pulse mt-4">Calculando...</p>
+              </div>
+            </div>
+
+          </div>
+
           <!-- Setor de Gestão -->
           <div id="setorGestao" class="mb-12">
             <div class="flex items-center justify-between gap-3 mb-4 sm:mb-5">

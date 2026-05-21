@@ -221,15 +221,16 @@ export const Api = {
   // =========================================================
   // 3.1. ATUALIZAR STATUS (NOVO 🆕)
   // =========================================================
-  async atualizarStatus(id, novoStatus, codigoSap = "") {
+  async atualizarStatus(id, novoStatus, codigoSap = "", observacao = undefined) {
     if (!settings.urlApiEnvio) return false;
 
     const payload = {
-      acao: "atualizarStatus", // Define que é uma atualização e não um novo pedido
+      acao: "atualizarStatus",
       id: id,
       status: novoStatus,
       codigoSap,
     };
+    if (observacao !== undefined) payload.observacao = observacao;
 
     try {
       // Disparo Cego (Fire and Forget)
@@ -300,7 +301,7 @@ export const Api = {
         // TRADUTOR: Converte os nomes que vêm do Google para os nomes do Site
         return dados.historico.map((p) => ({
           id: p.id,
-          dt: this.formatarDataISO(p.data), // Formata a data bonita
+          dt: this.formatarDataISO(p.data),
           mat: p.matricula,
           nome: p.nome,
           equ: p.equipe,
@@ -308,6 +309,8 @@ export const Api = {
           status: p.status,
           sap: p.codigoSap || "",
           local: p.local || "",
+          timeline: p.timeline || "",
+          observacao: p.observacao || "",
           its: p.itens,
           dataObj: new Date(p.data),
         }));
@@ -506,6 +509,87 @@ export const Api = {
     } catch (e) {
       console.error("Erro ao excluir colaborador:", e);
       return { success: false, msg: "Erro de conexão" };
+    }
+  },
+
+  // =========================================================
+  // 3.7. RASTREAR PEDIDO POR ID (Consulta Pública)
+  // =========================================================
+  async rastrearPedido(id) {
+    if (!settings.urlApiEnvio) return null;
+    try {
+      const response = await fetch(settings.urlApiEnvio, {
+        method: "POST",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify({ acao: "rastrearPedido", id: String(id).trim() }),
+      });
+      const dados = await response.json();
+      if (dados.result === "success" && dados.pedido) {
+        const p = dados.pedido;
+        return {
+          id: p.id, dt: this.formatarDataISO(p.data), mat: p.matricula,
+          nome: p.nome, equ: p.equipe, opc: p.tipo, local: p.local || "",
+          its: p.itens, status: p.status, sap: p.codigoSap || "",
+          timeline: p.timeline || "", observacao: p.observacao || "",
+          dataObj: new Date(p.data),
+        };
+      }
+      return null;
+    } catch (e) {
+      console.error("Erro ao rastrear pedido:", e);
+      return null;
+    }
+  },
+
+  // =========================================================
+  // 3.8. SALVAR OBSERVAÇÃO
+  // =========================================================
+  async salvarObservacao(id, observacao) {
+    if (!settings.urlApiEnvio) return false;
+    try {
+      const envio = fetch(settings.urlApiEnvio, {
+        method: "POST",
+        mode: "no-cors",
+        body: JSON.stringify({ acao: "salvarObservacao", id, observacao }),
+      });
+      const cronometro = new Promise((resolve) => setTimeout(() => resolve("timeout"), 2000));
+      await Promise.race([envio, cronometro]);
+      return true;
+    } catch (e) {
+      console.error("Erro ao salvar observação:", e);
+      return false;
+    }
+  },
+
+  // =========================================================
+  // 3.9. BUSCAR RESERVAS DO DIA
+  // =========================================================
+  async buscarReservasDoDia(local) {
+    if (!settings.urlApiEnvio) return [];
+    try {
+      const payload = { acao: "buscarReservasDoDia" };
+      if (local) payload.local = local;
+      const response = await fetch(settings.urlApiEnvio, {
+        method: "POST",
+        redirect: "follow",
+        headers: { "Content-Type": "text/plain;charset=utf-8" },
+        body: JSON.stringify(payload),
+      });
+      const dados = await response.json();
+      if (dados.result === "success" && Array.isArray(dados.reservas)) {
+        return dados.reservas.map((p) => ({
+          id: p.id, dt: this.formatarDataISO(p.data), mat: p.matricula,
+          nome: p.nome, equ: p.equipe, opc: p.tipo, local: p.local || "",
+          its: p.itens, status: p.status, sap: p.codigoSap || "",
+          timeline: p.timeline || "", observacao: p.observacao || "",
+          dataObj: new Date(p.data),
+        }));
+      }
+      return [];
+    } catch (e) {
+      console.error("Erro ao buscar reservas do dia:", e);
+      return [];
     }
   },
 
@@ -807,6 +891,12 @@ export const Api = {
     const iLOCAL = headers.findIndex(
       (h) => h.includes("LOCAL")
     );
+    const iTIMELINE = headers.findIndex(
+      (h) => h.includes("HISTORICO") || h.includes("TIMELINE")
+    );
+    const iOBS = headers.findIndex(
+      (h) => h.includes("OBSERVACAO") || h.includes("OBS")
+    );
 
     return lines
       .slice(1)
@@ -817,32 +907,33 @@ export const Api = {
 
         // Monta a string de itens (pegando colunas que não são cabeçalhos padrão)
         const its = [];
+        const colunasControle = [iID, iDT, iMAT, iNOM, iEQU, iTIPO, iSTATUS, iSAP, iLOCAL, iTIMELINE, iOBS];
         cols.forEach((v, i) => {
           if (
             v &&
             v !== "" &&
-            ![iID, iDT, iMAT, iNOM, iEQU, iTIPO, iSTATUS, iSAP, iLOCAL].includes(i)
+            !colunasControle.includes(i)
           ) {
-            // Evita pegar colunas de controle como "LOCAL" se estiver vazia
             if (headers[i] === "ITENS" || headers[i].includes("SOLICITADOS")) {
               its.push(v);
             } else if (!headers[i].includes("LOCAL")) {
-              // Fallback para colunas extras
               its.push(`${headers[i]}: ${v}`);
             }
           }
         });
 
         return {
-          id: cols[iID] || "", // ID ÚNICO
+          id: cols[iID] || "",
           dt: cols[iDT] || "---",
           mat: cols[iMAT] || "SEM ID",
           nome: cols[iNOM] || "---",
           equ: cols[iEQU] || "---",
           opc: cols[iTIPO] || "Material",
-          status: cols[iSTATUS] || "AGUARDANDO LIDERANÇA", // STATUS NOVO
+          status: cols[iSTATUS] || "AGUARDANDO LIDERANÇA",
           sap: iSAP >= 0 ? cols[iSAP] : "",
           local: iLOCAL >= 0 ? cols[iLOCAL] || "" : "",
+          timeline: iTIMELINE >= 0 ? cols[iTIMELINE] || "" : "",
+          observacao: iOBS >= 0 ? cols[iOBS] || "" : "",
           its: its.join(" | ") || cols[headers.indexOf("ITENS")] || "",
           dataObj: this.converterData(cols[iDT]),
         };

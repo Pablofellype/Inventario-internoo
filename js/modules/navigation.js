@@ -101,7 +101,10 @@ export const Navigation = {
         if(btnBag) btnBag.classList.add("translate-y-48");
 
         // Atualiza widget da home
-        Api.atualizarWidgetHome();
+        Api.atualizarWidgetHome().then(() => {
+            // Renderiza reservas da semana depois que os pedidos carregaram
+            UI.renderizarReservasHoje();
+        });
         Api.atualizarWidgetCriticos();
     },
 

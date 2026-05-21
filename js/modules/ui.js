@@ -2,6 +2,7 @@ import { State } from "../core/state.js";
 import { settings } from "../config/settings.js";
 import Auth from "../core/auth.js";
 import { Api } from "../services/api.js";
+import { Cache } from "../services/cache.js";
 import { Regras } from "./regras.js";
 
 export const UI = {
@@ -535,7 +536,7 @@ export const UI = {
     const statusTextClass = isAprovada ? "text-emerald-600" : isReprovada ? "text-red-600" : isAmarelo ? "text-amber-600" : "text-blue-500";
 
     const larguraPopup = window.innerWidth < 768 ? "95%" : "520px";
-    this._pedidoExport = { nome: p.nome, mat: p.mat, equ: p.equ, opc: p.opc, id: p.id, dt: p.dt, its: p.its, status: statusAtual, local: p.local || "" };
+    this._pedidoExport = { nome: p.nome, mat: p.mat, equ: p.equ, opc: p.opc, id: p.id, dt: p.dt, its: p.its, status: statusAtual, local: p.local || "", sap: p.sap || "" };
 
     const isEpiPopup = p.opc.toUpperCase().includes("EPI") || p.opc.toUpperCase().includes("UNIFORME");
     const localLabel = p.local ? p.local.replace('DML_', '').replace('_', ' ') : '';
@@ -624,6 +625,29 @@ export const UI = {
                             <p class="text-[9px] font-black text-[#9ca3af] uppercase tracking-[0.15em] mb-2">Código SAP (Retirada)</p>
                             <input id="inputSapCodigo" type="text" value="${sapValue}" placeholder="Informe o código do SAP" class="w-full bg-[#f9fafb] border border-[#e5e7eb] text-[#111827] text-sm font-bold rounded-xl p-3 outline-none focus:border-[#f40009] transition-all uppercase">
                             <p class="text-[8px] text-[#9ca3af] mt-2">Obrigatório para aprovar a solicitação.</p>
+                        </div>
+
+                        <!-- Observação -->
+                        <div class="bg-white p-4 rounded-2xl border border-[#e5e7eb] transition-all">
+                            <div class="flex items-center justify-between mb-2">
+                                <p class="text-[9px] font-black text-[#9ca3af] uppercase tracking-[0.15em]">Observação</p>
+                                <button onclick="UI.salvarObservacao('${p.id}')" id="btnSalvarObs" class="text-[8px] font-black uppercase px-2.5 py-1 rounded-lg bg-[#f3f4f6] text-[#9ca3af] hover:bg-[#f40009] hover:text-white transition-all cursor-pointer border-none">Salvar</button>
+                            </div>
+                            <textarea id="inputObservacao" rows="2" placeholder="Adicione uma observação sobre este pedido..." class="w-full bg-[#f9fafb] border border-[#e5e7eb] text-[#111827] text-xs font-medium rounded-xl p-3 outline-none focus:border-[#f40009] transition-all resize-none">${this._escHtml(p.observacao || '')}</textarea>
+                        </div>
+
+                        <!-- Timeline de Rastreio -->
+                        <div class="border border-[#e5e7eb] rounded-2xl overflow-hidden">
+                            <button onclick="UI.toggleSecaoPopup('secaoTimeline')" class="w-full flex items-center justify-between px-4 py-3 bg-[#f9fafb] hover:bg-[#f3f4f6] transition-colors cursor-pointer border-none text-left">
+                                <div class="flex items-center gap-2">
+                                    <i data-lucide="git-branch" class="w-4 h-4 text-violet-500"></i>
+                                    <span class="text-[10px] font-black uppercase tracking-[0.1em] text-[#111827]">Rastreio do Pedido</span>
+                                </div>
+                                <i data-lucide="chevron-down" class="w-4 h-4 text-[#9ca3af] transition-transform" id="iconTimeline"></i>
+                            </button>
+                            <div id="secaoTimeline" class="px-4 pb-4 pt-2">
+                                ${this._renderizarTimeline(p.timeline || '', statusAtual)}
+                            </div>
                         </div>
 
                         <!-- Itens (botões de ação só quando APROVADA) -->
@@ -1801,8 +1825,45 @@ export const UI = {
     });
   },
 
-  async exportarPedido(p) {
+  async exportarPedido(p, modo) {
     if (!p) return;
+
+    // Se não veio modo, pergunta qual tipo de imagem
+    if (!modo) {
+      Swal.fire({
+        title: '',
+        showConfirmButton: false,
+        showCloseButton: true,
+        width: window.innerWidth < 768 ? "90%" : "400px",
+        html: `
+          <div class="text-center py-3">
+            <h3 class="text-base font-black text-zinc-900 uppercase tracking-wide mb-1">Compartilhar</h3>
+            <p class="text-[10px] text-zinc-400 font-bold mb-5">Para qual grupo deseja gerar a imagem?</p>
+            <div class="space-y-2.5">
+              <button onclick="Swal.close(); UI.exportarPedido(UI._pedidoExport, 'admin')" class="w-full bg-white border-2 border-zinc-200 hover:border-[#F40009] rounded-xl p-4 text-left cursor-pointer transition-all group active:scale-[0.98] flex items-center gap-3">
+                <div class="w-10 h-10 bg-red-50 rounded-lg flex items-center justify-center flex-shrink-0">
+                  <i data-lucide="shield" class="w-5 h-5 text-[#F40009]"></i>
+                </div>
+                <div>
+                  <h4 class="text-xs font-black uppercase text-zinc-900">Grupo Administrativo</h4>
+                  <p class="text-[9px] text-zinc-400 font-bold mt-0.5">Com protocolo, matr\u00edcula e todos os dados</p>
+                </div>
+              </button>
+              ${((st) => {
+                const upper = (st || "").toUpperCase();
+                const finalizado = upper.includes("APROVADA") || upper.includes("BAIXADA");
+                return finalizado
+                  ? '<button onclick="Swal.close(); UI.exportarPedido(UI._pedidoExport, \'limpeza\')" class="w-full bg-white border-2 border-zinc-200 hover:border-emerald-400 rounded-xl p-4 text-left cursor-pointer transition-all group active:scale-[0.98] flex items-center gap-3"><div class="w-10 h-10 bg-emerald-50 rounded-lg flex items-center justify-center flex-shrink-0"><i data-lucide="users" class="w-5 h-5 text-emerald-500"></i></div><div><h4 class="text-xs font-black uppercase text-zinc-900">Grupo da Limpeza</h4><p class="text-[9px] text-zinc-400 font-bold mt-0.5">S\u00f3 SAP, materiais, DML e cores</p></div></button>'
+                  : '<div class="w-full bg-zinc-50 border-2 border-zinc-100 rounded-xl p-4 text-left opacity-50 flex items-center gap-3"><div class="w-10 h-10 bg-zinc-100 rounded-lg flex items-center justify-center flex-shrink-0"><i data-lucide="lock" class="w-5 h-5 text-zinc-400"></i></div><div><h4 class="text-xs font-black uppercase text-zinc-400">Grupo da Limpeza</h4><p class="text-[9px] text-zinc-400 font-bold mt-0.5">Dispon\u00edvel ap\u00f3s aprova\u00e7\u00e3o</p></div></div>';
+              })(p.status)}
+            </div>
+          </div>`,
+        customClass: { popup: "swal2-popup-custom" },
+        didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+      });
+      return;
+    }
+
     // Força refresh dos colaboradores para capturar número de WhatsApp recém-adicionado
     try { await Api.carregarColaboradores(); } catch {}
     const colabMatch = (State.colaboradores || []).find(c => String(c.matricula).trim() === String(p.mat).trim());
@@ -1811,17 +1872,42 @@ export const UI = {
       ? `<img src="${avatarUrl}" crossorigin="anonymous" style="width:64px;height:64px;border-radius:16px;object-fit:cover;border:3px solid rgba(255,255,255,0.3);box-shadow:0 4px 15px rgba(0,0,0,0.2);">`
       : `<div style="width:64px;height:64px;border-radius:16px;background:rgba(255,255,255,0.2);display:flex;align-items:center;justify-content:center;color:#fff;font-weight:900;font-size:24px;border:3px solid rgba(255,255,255,0.3);box-shadow:0 4px 15px rgba(0,0,0,0.2);">${(p.nome || "?")[0]}</div>`;
 
-    const itens = p.its.split("|").map(i => {
-      const raw = i.trim().replace(/\s*\{(OK|NAO|FALTA)\}\s*/g, "").replace(/\s*\[.*?\]\s*/g, "").trim();
-      return raw || "";
-    }).filter(Boolean);
+    const ehLimpeza = modo === "limpeza";
 
-    const itensHTML = itens.map(item =>
-      `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:#fafafa;border:1px solid #e4e4e7;border-radius:12px;margin-bottom:8px;">
-        <div style="width:8px;height:8px;border-radius:50%;background:#F40009;flex-shrink:0;"></div>
-        <span style="font-size:13px;font-weight:700;color:#27272a;text-transform:uppercase;">${item}</span>
-      </div>`
-    ).join("");
+    // Parse dos itens COM cores baseadas no marcador
+    const itensRaw = p.its.split("|").map(i => {
+      const raw = i.trim();
+      const upper = raw.toUpperCase();
+      const ehNao = upper.includes("{NAO}");
+      const ehFalta = upper.includes("{FALTA}");
+      const ehOk = upper.includes("{OK}");
+      const limpo = raw.replace(/\s*\{[^}]*\}/g, "").replace(/\s*\[\d{4,}\]/g, "").trim();
+      return { text: limpo, ehNao, ehFalta, ehOk };
+    }).filter(i => i.text);
+
+    const itensHTML = itensRaw.map(item => {
+      let bg, border, dotColor, textColor, textDeco;
+      if (item.ehNao) {
+        bg = "#fef2f2"; border = "#fecaca"; dotColor = "#dc2626"; textColor = "#dc2626"; textDeco = "line-through";
+      } else if (item.ehFalta) {
+        bg = "#fff7ed"; border = "#fed7aa"; dotColor = "#ea580c"; textColor = "#9a3412"; textDeco = "none";
+      } else if (item.ehOk) {
+        bg = "#f0fdf4"; border = "#bbf7d0"; dotColor = "#16a34a"; textColor = "#166534"; textDeco = "none";
+      } else {
+        bg = "#fafafa"; border = "#e4e4e7"; dotColor = "#F40009"; textColor = "#27272a"; textDeco = "none";
+      }
+      if (item.ehNao) {
+        return `<div style="position:relative;display:flex;align-items:center;gap:10px;padding:10px 14px;background:${bg};border:1px solid ${border};border-radius:12px;margin-bottom:8px;">
+          <div style="width:8px;height:8px;border-radius:50%;background:${dotColor};flex-shrink:0;"></div>
+          <span style="font-size:13px;font-weight:700;color:${textColor};text-transform:uppercase;">${item.text}</span>
+          <div style="position:absolute;left:30px;right:14px;top:50%;height:2px;background:#dc2626;border-radius:1px;"></div>
+        </div>`;
+      }
+      return `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:${bg};border:1px solid ${border};border-radius:12px;margin-bottom:8px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:${dotColor};flex-shrink:0;"></div>
+        <span style="font-size:13px;font-weight:700;color:${textColor};text-transform:uppercase;">${item.text}</span>
+      </div>`;
+    }).join("");
 
     const statusMap = {
       "EM ANÁLISE": { bg: "#fef3c7", color: "#92400e", icon: "⏳" },
@@ -1834,51 +1920,77 @@ export const UI = {
 
     const localText = p.local ? p.local.replace("DML_", "").replace("_", " ") : "";
 
+    // Busca SAP atual do pedido (pode ter sido atualizado no popup)
+    const sapVal = p.sap || document.getElementById("inputSapCodigo")?.value || "";
+
     // Criar card invisível para renderizar
     const cardDiv = document.createElement("div");
     cardDiv.id = "exportCard";
     cardDiv.style.cssText = "position:fixed;top:-9999px;left:-9999px;z-index:-1;width:520px;font-family:'Space Grotesk',sans-serif;";
-    cardDiv.innerHTML = `
-      <div style="background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.1);border:2px solid #f4f4f5;">
-        <!-- Header Vermelho -->
-        <div style="background:linear-gradient(135deg,#F40009 0%,#dc0008 100%);padding:28px 28px 24px;">
-          <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
-            ${avatarHTML}
-            <div style="flex:1;min-width:0;">
-              <div style="font-size:18px;font-weight:900;color:#fff;text-transform:uppercase;line-height:1.2;">${p.nome}</div>
-              <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:2px;margin-top:5px;">${p.opc || "MATERIAL"}</div>
-            </div>
+
+    if (ehLimpeza) {
+      // IMAGEM PARA GRUPO DA LIMPEZA: só SAP, DML, materiais com cores
+      cardDiv.innerHTML = `
+        <div style="background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.1);border:2px solid #f4f4f5;">
+          <div style="background:linear-gradient(135deg,#10b981 0%,#059669 100%);padding:24px 28px;">
+            <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Reserva de Material</div>
+            <div style="font-size:22px;font-weight:900;color:#fff;text-transform:uppercase;">${localText || "MATERIAL"}</div>
           </div>
-          <div style="display:flex;gap:10px;">
-            <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
-              <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Matrícula</div>
-              <div style="font-size:16px;font-weight:900;color:#fff;">${p.mat}</div>
-            </div>
-            <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
-              <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Equipe</div>
-              <div style="font-size:15px;font-weight:900;color:#fff;">${p.equ}</div>
-            </div>
-            ${localText ? `<div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
-              <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Local</div>
-              <div style="font-size:15px;font-weight:900;color:#fff;">${localText}</div>
+          <div style="padding:24px 28px 28px;">
+            ${sapVal ? `<div style="margin-bottom:18px;background:#f0fdf4;border:2px solid #bbf7d0;border-radius:14px;padding:14px 18px;">
+              <div style="font-size:9px;font-weight:700;color:#16a34a;text-transform:uppercase;letter-spacing:2px;margin-bottom:4px;">C\u00f3digo SAP</div>
+              <div style="font-size:22px;font-weight:900;color:#166534;letter-spacing:1px;">${sapVal}</div>
             </div>` : ""}
+            <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Materiais</div>
+            ${itensHTML}
+            <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f4f4f5;text-align:center;">
+              <div style="font-size:9px;font-weight:700;color:#d4d4d8;text-transform:uppercase;letter-spacing:2px;">Sistema de Invent\u00e1rio</div>
+              <div style="font-size:8px;color:#d4d4d8;margin-top:3px;">${p.dt || ""}</div>
+            </div>
           </div>
-        </div>
-        <!-- Body Branco -->
-        <div style="padding:24px 28px 28px;">
-          <div style="margin-bottom:18px;">
-            <div style="font-size:9px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;">Protocolo</div>
-            <div style="font-size:20px;font-weight:900;color:#18181b;letter-spacing:1px;">${p.id || "N/A"}</div>
+        </div>`;
+    } else {
+      // IMAGEM PARA GRUPO ADMINISTRATIVO: completa com protocolo, matrícula, etc.
+      cardDiv.innerHTML = `
+        <div style="background:#ffffff;border-radius:24px;overflow:hidden;box-shadow:0 20px 60px rgba(0,0,0,0.1);border:2px solid #f4f4f5;">
+          <div style="background:linear-gradient(135deg,#F40009 0%,#dc0008 100%);padding:28px 28px 24px;">
+            <div style="display:flex;align-items:center;gap:16px;margin-bottom:18px;">
+              ${avatarHTML}
+              <div style="flex:1;min-width:0;">
+                <div style="font-size:18px;font-weight:900;color:#fff;text-transform:uppercase;line-height:1.2;">${p.nome}</div>
+                <div style="font-size:11px;font-weight:700;color:rgba(255,255,255,0.7);text-transform:uppercase;letter-spacing:2px;margin-top:5px;">${p.opc || "MATERIAL"}</div>
+              </div>
+            </div>
+            <div style="display:flex;gap:10px;">
+              <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
+                <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Matr\u00edcula</div>
+                <div style="font-size:16px;font-weight:900;color:#fff;">${p.mat}</div>
+              </div>
+              <div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
+                <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Equipe</div>
+                <div style="font-size:15px;font-weight:900;color:#fff;">${p.equ}</div>
+              </div>
+              ${localText ? `<div style="flex:1;background:rgba(255,255,255,0.15);border-radius:12px;padding:10px 14px;">
+                <div style="font-size:9px;font-weight:700;color:rgba(255,255,255,0.6);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:3px;">Local</div>
+                <div style="font-size:15px;font-weight:900;color:#fff;">${localText}</div>
+              </div>` : ""}
+            </div>
           </div>
-          <div style="height:2px;background:#f4f4f5;margin:18px 0;border-radius:1px;"></div>
-          <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Itens Solicitados</div>
-          ${itensHTML}
-          <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f4f4f5;text-align:center;">
-            <div style="font-size:9px;font-weight:700;color:#d4d4d8;text-transform:uppercase;letter-spacing:2px;">Sistema de Inventário</div>
-            <div style="font-size:8px;color:#d4d4d8;margin-top:3px;">${p.dt || ""}</div>
+          <div style="padding:24px 28px 28px;">
+            <div style="margin-bottom:18px;">
+              <div style="font-size:9px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:2px;margin-bottom:3px;">Protocolo</div>
+              <div style="font-size:20px;font-weight:900;color:#18181b;letter-spacing:1px;">${p.id || "N/A"}</div>
+            </div>
+            <div style="height:2px;background:#f4f4f5;margin:18px 0;border-radius:1px;"></div>
+            <div style="font-size:10px;font-weight:700;color:#a1a1aa;text-transform:uppercase;letter-spacing:2px;margin-bottom:12px;">Itens Solicitados</div>
+            ${itensHTML}
+            <div style="margin-top:20px;padding-top:16px;border-top:2px solid #f4f4f5;text-align:center;">
+              <div style="font-size:9px;font-weight:700;color:#d4d4d8;text-transform:uppercase;letter-spacing:2px;">Sistema de Invent\u00e1rio</div>
+              <div style="font-size:8px;color:#d4d4d8;margin-top:3px;">${p.dt || ""}</div>
+            </div>
           </div>
-        </div>
-      </div>`;
+        </div>`;
+    }
 
     document.body.appendChild(cardDiv);
 
@@ -3364,5 +3476,817 @@ export const UI = {
         customClass: { popup: "swal2-popup-custom" },
       });
     }
+  },
+
+  // =========================================================
+  // TIMELINE DE RASTREIO
+  // =========================================================
+  _renderizarTimeline(timelineStr, statusAtual) {
+    const etapasOrdem = ["AGUARDANDO LIDERANÇA", "EM ANÁLISE", "APROVADA", "RESERVA APROVADA", "RESERVA BAIXADA", "NÃO APROVADA"];
+
+    // Parse da timeline: "STATUS|dd/MM/yyyy HH:mm >> STATUS|dd/MM/yyyy HH:mm"
+    const entradas = [];
+    if (timelineStr) {
+      timelineStr.split(" >> ").forEach(entry => {
+        const parts = entry.split("|");
+        if (parts.length >= 2) {
+          entradas.push({ status: parts[0].trim(), data: parts[1].trim() });
+        }
+      });
+    }
+
+    if (entradas.length === 0) {
+      // Sem timeline gravada — mostra status atual sem horários
+      return `<p class="text-[10px] text-[#9ca3af] font-bold py-2">Sem dados de rastreio disponíveis para este pedido.</p>`;
+    }
+
+    // Calcula progresso
+    const statusFinal = statusAtual.toUpperCase();
+    const isReprovada = statusFinal.includes("NÃO");
+    let progresso = 0;
+    if (isReprovada) {
+      progresso = 100;
+    } else {
+      const idx = etapasOrdem.indexOf(statusFinal);
+      if (idx >= 0) progresso = Math.round(((idx + 1) / (etapasOrdem.length - 1)) * 100);
+      else progresso = 20;
+    }
+
+    const barColor = isReprovada ? "bg-red-500" : "bg-emerald-500";
+    const barBg = isReprovada ? "bg-red-100" : "bg-emerald-100";
+
+    let html = `
+      <div class="mb-3">
+        <div class="flex justify-between items-center mb-1.5">
+          <span class="text-[9px] font-black uppercase tracking-wider ${isReprovada ? 'text-red-500' : 'text-emerald-600'}">${isReprovada ? 'Reprovado' : progresso + '% concluído'}</span>
+          <span class="text-[9px] font-bold text-[#9ca3af]">${entradas.length} ${entradas.length === 1 ? 'etapa' : 'etapas'}</span>
+        </div>
+        <div class="w-full h-2 ${barBg} rounded-full overflow-hidden">
+          <div class="${barColor} h-full rounded-full transition-all duration-500" style="width:${progresso}%"></div>
+        </div>
+      </div>
+      <div class="space-y-0 relative">
+        <div class="absolute left-[7px] top-3 bottom-3 w-[2px] bg-[#e5e7eb]"></div>`;
+
+    entradas.forEach((e, i) => {
+      const isLast = i === entradas.length - 1;
+      const isNao = e.status.includes("NÃO");
+      const dotColor = isNao ? "bg-red-500" : isLast ? "bg-emerald-500 ring-4 ring-emerald-100" : "bg-[#9ca3af]";
+
+      html += `
+        <div class="flex items-start gap-3 py-2 relative">
+          <div class="w-4 h-4 rounded-full ${dotColor} flex-shrink-0 z-10 mt-0.5"></div>
+          <div>
+            <p class="text-[11px] font-black uppercase text-[#111827] leading-tight">${this._escHtml(e.status)}</p>
+            <p class="text-[9px] font-bold text-[#9ca3af] mt-0.5">${this._escHtml(e.data)}</p>
+          </div>
+        </div>`;
+    });
+
+    html += `</div>`;
+    return html;
+  },
+
+  // =========================================================
+  // SALVAR OBSERVAÇÃO
+  // =========================================================
+  async salvarObservacao(id) {
+    const textarea = document.getElementById("inputObservacao");
+    const btn = document.getElementById("btnSalvarObs");
+    if (!textarea || !btn) return;
+
+    const obs = textarea.value.trim();
+    btn.innerHTML = "Salvando...";
+    btn.disabled = true;
+
+    await Api.salvarObservacao(id, obs);
+
+    // Atualiza no State local também
+    const pedido = State.pedidos.find(p => p.id == id);
+    if (pedido) pedido.observacao = obs;
+
+    btn.innerHTML = "Salvo!";
+    btn.classList.add("bg-emerald-500", "text-white");
+    btn.classList.remove("bg-[#f3f4f6]", "text-[#9ca3af]");
+    setTimeout(() => {
+      btn.innerHTML = "Salvar";
+      btn.disabled = false;
+      btn.classList.remove("bg-emerald-500", "text-white");
+      btn.classList.add("bg-[#f3f4f6]", "text-[#9ca3af]");
+    }, 2000);
+  },
+
+  // =========================================================
+  // RESERVAS HOJE (Widget Home)
+  // =========================================================
+  _filtroReservaAtual: "TODOS",
+  _semanaOffset: 0, // 0 = semana atual, -1 = semana passada, -2 = retrasada...
+
+  // Calcula segunda e domingo com offset de semanas
+  _getSemanaAtual() {
+    const hoje = new Date();
+    const dia = hoje.getDay(); // 0=dom, 1=seg...
+    const diffSeg = dia === 0 ? -6 : 1 - dia;
+    const segunda = new Date(hoje);
+    segunda.setDate(hoje.getDate() + diffSeg + (this._semanaOffset * 7));
+    segunda.setHours(0, 0, 0, 0);
+    const domingo = new Date(segunda);
+    domingo.setDate(segunda.getDate() + 6);
+    domingo.setHours(23, 59, 59, 999);
+    return { segunda, domingo };
+  },
+
+  async renderizarReservasHoje() {
+    const widget = document.getElementById("widgetReservasHoje");
+    if (!widget) return;
+
+    widget.innerHTML = '<p class="text-xs text-zinc-400 animate-pulse">Carregando...</p>';
+
+    try {
+      // Calcula intervalo da semana (segunda a domingo)
+      const { segunda, domingo } = this._getSemanaAtual();
+
+      // Atualiza label com o período
+      const labelSemana = document.getElementById("labelSemanaReservas");
+      if (labelSemana) {
+        const fmt = (d) => `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+        const sufixo = this._semanaOffset === 0 ? " (atual)" : this._semanaOffset === -1 ? " (passada)" : "";
+        labelSemana.textContent = `${fmt(segunda)} a ${fmt(domingo)}${sufixo}`;
+      }
+
+      // Mostra/esconde botões de navegação
+      const btnHoje = document.getElementById("btnSemanaAtual");
+      const btnProx = document.getElementById("btnSemanaSeguinte");
+      if (btnHoje) btnHoje.classList.toggle("hidden", this._semanaOffset === 0);
+      if (btnProx) btnProx.classList.toggle("hidden", this._semanaOffset >= 0);
+
+      // Garante que os pedidos estão carregados
+      if (!State.pedidos || State.pedidos.length === 0) {
+        try {
+          const cache = await Cache.carregar("PEDIDOS_LOG");
+          if (cache && cache.length > 0) State.pedidos = cache;
+        } catch (cacheErr) {
+          console.warn("Cache indisponível:", cacheErr);
+        }
+      }
+      if ((!State.pedidos || State.pedidos.length === 0) && navigator.onLine) {
+        try {
+          await Api.sincronizarPedidos(false);
+        } catch (syncErr) {
+          console.warn("Sync falhou:", syncErr);
+        }
+      }
+
+      let pedidos = State.pedidos || [];
+
+      // Função robusta para extrair Date de qualquer formato
+      const parseData = (p) => {
+        // 1. Tenta dataObj (pode ser Date real ou string serializada do cache)
+        if (p.dataObj) {
+          let obj = p.dataObj;
+          if (typeof obj === "string" || typeof obj === "number") obj = new Date(obj);
+          if (obj instanceof Date && !isNaN(obj.getTime())) return obj;
+        }
+        // 2. Parse do campo dt (texto bruto do CSV: "dd/MM/yyyy HH:mm:ss")
+        const raw = String(p.dt || "").trim();
+        if (!raw || raw === "---") return null;
+        const parte = raw.split(" ")[0];
+        if (parte.includes("/")) {
+          const d = parte.split("/");
+          if (d.length === 3) {
+            // dd/MM/yyyy (formato BR)
+            if (parseInt(d[2]) > 1000) return new Date(parseInt(d[2]), parseInt(d[1]) - 1, parseInt(d[0]));
+            // MM/dd/yyyy (fallback US)
+            return new Date(parseInt(d[2]), parseInt(d[0]) - 1, parseInt(d[1]));
+          }
+        }
+        // 3. ISO ou outro formato
+        const tentativa = new Date(raw);
+        return isNaN(tentativa.getTime()) ? null : tentativa;
+      };
+
+      const reservasSemana = pedidos.filter(p => {
+        // Só pedidos de DML (ignora EPI_UNIFORME e sem local)
+        const local = (p.local || "").toUpperCase();
+        if (!local || !local.startsWith("DML")) return false;
+
+        const dt = parseData(p);
+        if (!dt) return false;
+        const ehSemana = dt >= segunda && dt <= domingo;
+        const ehReserva = (p.status || "").toUpperCase().includes("RESERVA");
+        return ehSemana || ehReserva;
+      });
+
+      // Gera filtros dinâmicos a partir dos DMLs existentes
+      const dmlsEncontrados = new Set();
+      reservasSemana.forEach(p => {
+        const local = (p.local || "").toUpperCase().trim();
+        if (local && local.startsWith("DML")) dmlsEncontrados.add(local);
+      });
+
+      const containerFiltros = document.getElementById("filtrosReservasDml");
+      if (containerFiltros) {
+        const ativo = this._filtroReservaAtual || "TODOS";
+        let htmlFiltros = `<button onclick="Sistema.filtrarReservas('TODOS')" class="filtro-reserva ${ativo === 'TODOS' ? 'filtro-reserva-ativo' : 'border-zinc-200 text-zinc-400 bg-white'} text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border transition-all cursor-pointer whitespace-nowrap">Todos</button>`;
+        Array.from(dmlsEncontrados).sort().forEach(dml => {
+          const label = dml.replace("DML_", "").replace(/_/g, " ");
+          const isAtivo = ativo === dml;
+          htmlFiltros += `<button onclick="Sistema.filtrarReservas('${dml}')" class="filtro-reserva ${isAtivo ? 'filtro-reserva-ativo' : 'border-zinc-200 text-zinc-400 bg-white'} text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border transition-all cursor-pointer whitespace-nowrap hover:border-emerald-300">${label}</button>`;
+        });
+        containerFiltros.innerHTML = htmlFiltros;
+      }
+
+      // Filtra por DML se selecionado
+      let filtrados = reservasSemana;
+      if (this._filtroReservaAtual && this._filtroReservaAtual !== "TODOS") {
+        filtrados = reservasSemana.filter(p => {
+          const local = (p.local || "").toUpperCase();
+          return local === this._filtroReservaAtual;
+        });
+      }
+
+      // Atualiza resumo semanal com os mesmos dados
+      this.renderizarResumoDiario(reservasSemana);
+
+      if (filtrados.length === 0) {
+        widget.innerHTML = '<p class="text-xs text-zinc-400">Nenhuma reserva ou pedido nesta semana.</p>';
+        return;
+      }
+
+      const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+
+      widget.innerHTML = filtrados.map(p => {
+        const hora = p.dt && p.dt.includes(" ") ? p.dt.split(" ")[1].substring(0, 5) : "??:??";
+        const dtParsed = parseData(p);
+        const dataCurta = dtParsed ? `${diasSemana[dtParsed.getDay()]} ${String(dtParsed.getDate()).padStart(2,'0')}/${String(dtParsed.getMonth()+1).padStart(2,'0')}` : p.dt?.split(" ")[0] || "---";
+        const nomeCurto = (p.nome || "").split(" ")[0];
+        const status = p.status || "---";
+        const local = p.local ? p.local.replace("DML_", "").replace("_", " ") : "";
+        const obs = p.observacao ? `<p class="text-[8px] text-zinc-400 mt-0.5 truncate max-w-[200px]" title="${this._escHtml(p.observacao)}"><i data-lucide="message-square" class="w-2.5 h-2.5 inline mr-0.5"></i>${this._escHtml(p.observacao.substring(0, 40))}${p.observacao.length > 40 ? '...' : ''}</p>` : '';
+
+        const statusKey = status.toUpperCase();
+        let dotColor = "bg-amber-400";
+        if (statusKey.includes("APROVADA") && !statusKey.includes("NÃO")) dotColor = "bg-emerald-500";
+        if (statusKey.includes("NÃO")) dotColor = "bg-red-500";
+        if (statusKey.includes("RESERVA")) dotColor = "bg-blue-500";
+
+        // Botão de confirmar retirada (só para APROVADA ou RESERVA APROVADA)
+        const podeConfirmar = statusKey.includes("APROVADA") && !statusKey.includes("NÃO") && !statusKey.includes("BAIXADA");
+        const jaBaixada = statusKey.includes("BAIXADA");
+        const btnConfirmar = podeConfirmar
+          ? `<button onclick="event.stopPropagation(); Sistema.confirmarRetirada('${p.id}')" class="mt-1.5 w-full py-1.5 rounded-lg text-[8px] font-black uppercase tracking-wider bg-emerald-500 text-white border-none cursor-pointer hover:bg-emerald-600 active:scale-95 transition-all flex items-center justify-center gap-1"><i data-lucide="check-circle" class="w-3 h-3"></i> Confirmar Retirada</button>`
+          : jaBaixada
+            ? `<div class="mt-1.5 flex items-center justify-center gap-1 py-1 text-[8px] font-black uppercase text-emerald-500"><i data-lucide="check-circle" class="w-3 h-3"></i> Retirado</div>`
+            : '';
+
+        return `
+          <div class="p-2.5 bg-zinc-50 rounded-xl border border-zinc-100 transition-all hover:border-emerald-200">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center gap-2 overflow-hidden flex-1">
+                <div class="w-2 h-2 rounded-full ${dotColor} flex-shrink-0"></div>
+                <div class="min-w-0">
+                  <p class="text-[10px] font-bold uppercase text-zinc-700 truncate">${this._escHtml(nomeCurto)} <span class="text-zinc-300 mx-0.5">|</span> <span class="text-[9px] font-black ${dotColor.replace('bg-', 'text-')}">${this._escHtml(status)}</span></p>
+                  <div class="flex items-center gap-2 mt-0.5">
+                    ${local ? `<span class="text-[8px] font-bold text-violet-500 bg-violet-50 px-1.5 py-0.5 rounded">${this._escHtml(local)}</span>` : ''}
+                    <span class="text-[8px] font-bold text-zinc-400">#${p.id || 'N/A'}</span>
+                  </div>
+                  ${obs}
+                </div>
+              </div>
+              <div class="flex flex-col items-end ml-2 flex-shrink-0">
+                <span class="text-[9px] font-black text-zinc-400 bg-white px-2 py-1 rounded-lg border border-zinc-100 whitespace-nowrap">${hora}</span>
+                <span class="text-[8px] font-bold text-zinc-300 mt-0.5">${dataCurta}</span>
+              </div>
+            </div>
+            ${btnConfirmar}
+          </div>`;
+      }).join("");
+
+      if (window.lucide) window.lucide.createIcons();
+    } catch (e) {
+      console.warn("Reservas da semana:", e);
+      widget.innerHTML = '<p class="text-xs text-zinc-400">Nenhuma reserva ou pedido nesta semana.</p>';
+      // Garante que resumo semanal não fica em "Calculando..."
+      this.renderizarResumoDiario([]);
+    }
+  },
+
+  // =========================================================
+  // RESUMO DIÁRIO (Widget Home)
+  // =========================================================
+  renderizarResumoDiario(pedidosHoje) {
+    const widget = document.getElementById("widgetResumoDiario");
+    if (!widget) return;
+
+    if (!pedidosHoje || pedidosHoje.length === 0) {
+      widget.innerHTML = '<p class="text-xs text-zinc-400">Nenhum pedido registrado nesta semana.</p>';
+      return;
+    }
+
+    const total = pedidosHoje.length;
+    let aguardando = 0, emAnalise = 0, aprovados = 0, reprovados = 0, reservas = 0;
+    const porDml = {};
+
+    pedidosHoje.forEach(p => {
+      const s = (p.status || "").toUpperCase();
+      if (s.includes("AGUARDANDO")) aguardando++;
+      else if (s.includes("ANÁLISE") || s.includes("ANALISE")) emAnalise++;
+      else if (s.includes("NÃO") || s.includes("NAO")) reprovados++;
+      else if (s.includes("RESERVA")) reservas++;
+      else if (s.includes("APROVADA")) aprovados++;
+
+      const dml = p.local ? p.local.replace("DML_", "").replace("_", " ") : "Sem DML";
+      porDml[dml] = (porDml[dml] || 0) + 1;
+    });
+
+    // Pedidos parados (>24h sem mudança com status pendente)
+    const agora = Date.now();
+    const parados = pedidosHoje.filter(p => {
+      const s = (p.status || "").toUpperCase();
+      const ehPendente = s.includes("AGUARDANDO") || s.includes("ANÁLISE") || s.includes("ANALISE");
+      if (!ehPendente) return false;
+      let dt = p.dataObj;
+      if (typeof dt === "string" || typeof dt === "number") dt = new Date(dt);
+      if (!dt || !(dt instanceof Date) || isNaN(dt.getTime())) {
+        const raw = String(p.dt || "").split(" ")[0];
+        if (raw.includes("/")) { const d = raw.split("/"); dt = new Date(parseInt(d[2]), parseInt(d[1])-1, parseInt(d[0])); }
+      }
+      return dt && !isNaN(dt.getTime()) && (agora - dt.getTime()) > 24 * 60 * 60 * 1000;
+    }).length;
+
+    const dmlHtml = Object.entries(porDml).sort((a, b) => b[1] - a[1]).map(([dml, qtd]) =>
+      `<div class="flex items-center justify-between">
+        <span class="text-[10px] font-bold text-zinc-600 uppercase">${this._escHtml(dml)}</span>
+        <span class="text-[10px] font-black text-zinc-900">${qtd}</span>
+      </div>`
+    ).join("");
+
+    widget.innerHTML = `
+      <div class="grid grid-cols-3 gap-2 mb-3">
+        <div class="bg-zinc-50 p-3 rounded-xl text-center border border-zinc-100">
+          <p class="text-lg font-black text-zinc-900">${total}</p>
+          <p class="text-[8px] font-black uppercase tracking-wider text-zinc-400">Total</p>
+        </div>
+        <div class="bg-emerald-50 p-3 rounded-xl text-center border border-emerald-100">
+          <p class="text-lg font-black text-emerald-600">${aprovados + reservas}</p>
+          <p class="text-[8px] font-black uppercase tracking-wider text-emerald-500">Aprovados</p>
+        </div>
+        <div class="bg-amber-50 p-3 rounded-xl text-center border border-amber-100">
+          <p class="text-lg font-black text-amber-600">${aguardando + emAnalise}</p>
+          <p class="text-[8px] font-black uppercase tracking-wider text-amber-500">Pendentes</p>
+        </div>
+      </div>
+      ${reprovados > 0 ? `<div class="bg-red-50 p-2 rounded-xl text-center border border-red-100 mb-3"><span class="text-[9px] font-black text-red-500 uppercase">${reprovados} reprovado${reprovados > 1 ? 's' : ''}</span></div>` : ''}
+      ${parados > 0 ? `<div class="bg-orange-50 p-2 rounded-xl border border-orange-200 mb-3 flex items-center gap-2"><i data-lucide="alert-circle" class="w-3.5 h-3.5 text-orange-500 flex-shrink-0"></i><span class="text-[9px] font-bold text-orange-600">${parados} pedido${parados > 1 ? 's' : ''} parado${parados > 1 ? 's' : ''} h\u00e1 mais de 24h</span></div>` : ''}
+      <div class="bg-zinc-50 p-3 rounded-xl border border-zinc-100">
+        <p class="text-[9px] font-black uppercase tracking-wider text-zinc-400 mb-2">Por Setor / DML</p>
+        <div class="space-y-1.5">${dmlHtml || '<span class="text-[9px] text-zinc-400">Sem dados</span>'}</div>
+      </div>
+    `;
+
+    if (window.lucide) window.lucide.createIcons();
+  },
+
+  // =========================================================
+  // RASTREIO PÚBLICO (Tela de Login)
+  // =========================================================
+  async abrirRastreioPublico() {
+    Swal.fire({
+      title: '',
+      showConfirmButton: false,
+      showCloseButton: true,
+      width: window.innerWidth < 768 ? "95%" : "420px",
+      html: `
+        <div class="text-center py-4 px-2">
+          <div class="w-14 h-14 bg-zinc-900 rounded-2xl flex items-center justify-center mx-auto mb-4">
+            <i data-lucide="search" class="w-7 h-7 text-white"></i>
+          </div>
+          <h3 class="text-lg font-black text-zinc-900 uppercase tracking-wide mb-1">Rastrear Pedido</h3>
+          <p class="text-[11px] text-zinc-400 font-bold mb-6">O que voc\u00ea quer consultar?</p>
+
+          <div class="space-y-3">
+            <!-- Opção 1: Rastreio Pessoal -->
+            <button onclick="UI._abrirRastreioPessoal()" class="w-full bg-white border-2 border-zinc-200 hover:border-[#F40009] rounded-2xl p-5 text-left cursor-pointer transition-all group active:scale-[0.98]">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center group-hover:bg-blue-100 transition-all flex-shrink-0">
+                  <i data-lucide="user-search" class="w-6 h-6 text-blue-500"></i>
+                </div>
+                <div>
+                  <h4 class="text-sm font-black uppercase text-zinc-900">Meu Material / EPI</h4>
+                  <p class="text-[10px] text-zinc-400 font-bold mt-0.5">Buscar por matr\u00edcula ou protocolo</p>
+                </div>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-zinc-300 ml-auto group-hover:text-[#F40009] transition-colors flex-shrink-0"></i>
+              </div>
+            </button>
+
+            <!-- Opção 2: Reservas DML -->
+            <button onclick="UI._abrirRastreioDml()" class="w-full bg-white border-2 border-zinc-200 hover:border-emerald-400 rounded-2xl p-5 text-left cursor-pointer transition-all group active:scale-[0.98]">
+              <div class="flex items-center gap-4">
+                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center group-hover:bg-emerald-100 transition-all flex-shrink-0">
+                  <i data-lucide="calendar-range" class="w-6 h-6 text-emerald-500"></i>
+                </div>
+                <div>
+                  <h4 class="text-sm font-black uppercase text-zinc-900">Reservas DML</h4>
+                  <p class="text-[10px] text-zinc-400 font-bold mt-0.5">Ver reservas da semana por setor</p>
+                </div>
+                <i data-lucide="chevron-right" class="w-5 h-5 text-zinc-300 ml-auto group-hover:text-emerald-500 transition-colors flex-shrink-0"></i>
+              </div>
+            </button>
+          </div>
+        </div>`,
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+    });
+  },
+
+  // --- Rastreio Pessoal (matrícula ou protocolo) ---
+  async _abrirRastreioPessoal() {
+    const { value: termo } = await Swal.fire({
+      title: '',
+      html: `
+        <div class="text-center py-2">
+          <div class="w-14 h-14 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-4 border-2 border-blue-100">
+            <i data-lucide="user-search" class="w-7 h-7 text-blue-500"></i>
+          </div>
+          <h3 class="text-lg font-black text-zinc-900 uppercase tracking-wide">Meu Material / EPI</h3>
+          <p class="text-[11px] text-zinc-400 font-bold mt-1 mb-5">Digite sua <b>matr\u00edcula</b> ou o <b>n\u00famero do protocolo</b></p>
+          <input id="swal-rastreio-id" type="text" placeholder="Ex: 40145 ou #7132938" class="w-full bg-zinc-50 border-2 border-zinc-200 text-zinc-900 text-center text-lg font-black rounded-xl p-4 outline-none focus:border-[#F40009] transition-all uppercase tracking-widest" />
+        </div>`,
+      showCancelButton: true,
+      confirmButtonColor: "#F40009",
+      confirmButtonText: "RASTREAR",
+      cancelButtonText: "VOLTAR",
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+      preConfirm: () => {
+        const val = document.getElementById("swal-rastreio-id")?.value?.trim();
+        if (!val) { Swal.showValidationMessage("Informe a matr\u00edcula ou ID"); return false; }
+        return val;
+      },
+    });
+
+    if (!termo) return;
+
+    Swal.fire({
+      title: '', showConfirmButton: false, allowOutsideClick: false,
+      html: '<div class="flex flex-col items-center py-6"><div class="w-10 h-10 border-4 border-zinc-200 border-t-[#F40009] rounded-full animate-spin mb-4"></div><p class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Buscando...</p></div>',
+      customClass: { popup: "swal2-popup-custom" },
+    });
+
+    const termoLimpo = termo.trim().toUpperCase();
+
+    if (termoLimpo.startsWith("#")) {
+      // Busca por ID protocolo
+      if (!State.pedidos || State.pedidos.length === 0) await Api.sincronizarPedidos(true);
+      const pedido = (State.pedidos || []).find(p => String(p.id).toUpperCase() === termoLimpo);
+      if (pedido) { this._mostrarResultadoRastreio(pedido); return; }
+      const remoto = await Api.rastrearPedido(termoLimpo.replace("#", ""));
+      if (remoto) { this._mostrarResultadoRastreio(remoto); return; }
+      Swal.fire({ icon: "error", title: "Pedido n\u00e3o encontrado", text: `Nenhum pedido com ID ${termoLimpo}.`, confirmButtonColor: "#F40009", customClass: { popup: "swal2-popup-custom" } });
+    } else {
+      // Busca por matrícula — mostra só EPI/Uniforme pessoal
+      try {
+        const historico = await Api.buscarHistoricoUnificado(termoLimpo);
+        const apenasEpi = (historico || []).filter(p => {
+          const tipo = String(p.opc || "").toUpperCase();
+          return tipo.includes("EPI") || tipo.includes("UNIFORME");
+        });
+        if (apenasEpi.length > 0) {
+          this.mostrarHistoricoUsuario(apenasEpi);
+        } else {
+          Swal.fire({ icon: "info", title: "Nenhum EPI encontrado", text: `Nenhuma solicita\u00e7\u00e3o de EPI/Uniforme para a matr\u00edcula ${termoLimpo}. Para ver reservas de material DML, use a op\u00e7\u00e3o "Reservas DML".`, confirmButtonColor: "#F40009", customClass: { popup: "swal2-popup-custom" } });
+        }
+      } catch (e) {
+        Swal.fire({ icon: "error", title: "Erro", text: "Falha ao consultar. Tente novamente.", confirmButtonColor: "#F40009", customClass: { popup: "swal2-popup-custom" } });
+      }
+    }
+  },
+
+  // --- Rastreio DML (reservas da semana de todos) ---
+  async _abrirRastreioDml() {
+    Swal.fire({
+      title: '', showConfirmButton: false, allowOutsideClick: false,
+      html: '<div class="flex flex-col items-center py-6"><div class="w-10 h-10 border-4 border-zinc-200 border-t-emerald-500 rounded-full animate-spin mb-4"></div><p class="text-[10px] font-black uppercase tracking-widest text-zinc-400">Carregando reservas...</p></div>',
+      customClass: { popup: "swal2-popup-custom" },
+    });
+
+    // Garante dados carregados
+    if (!State.pedidos || State.pedidos.length === 0) {
+      try { await Api.sincronizarPedidos(false); } catch(e) {}
+    }
+
+    const todasReservas = this._getReservasDmlSemana(null);
+    const dmlsSet = new Set();
+    todasReservas.forEach(p => {
+      const local = (p.local || "").toUpperCase().trim();
+      if (local.startsWith("DML")) dmlsSet.add(local);
+    });
+    const dmls = Array.from(dmlsSet).sort();
+
+    const { segunda, domingo } = this._getSemanaAtual();
+    const fmt = (d) => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+
+    let htmlFiltros = dmls.map(dml => {
+      const label = dml.replace("DML_", "").replace(/_/g, " ");
+      return `<button onclick="UI._filtrarDmlRastreio('${dml}')" class="filtro-dml-rastreio text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-zinc-200 text-zinc-400 bg-white transition-all cursor-pointer whitespace-nowrap hover:border-emerald-300">${label}</button>`;
+    }).join("");
+
+    if (dmls.length === 0) {
+      htmlFiltros = `<span class="text-[9px] text-[#9ca3af]">Nenhuma reserva DML nesta semana.</span>`;
+    }
+
+    Swal.fire({
+      title: "",
+      width: window.innerWidth < 768 ? "95%" : "520px",
+      padding: "0",
+      showCloseButton: true,
+      showConfirmButton: false,
+      html: `
+        <div class="text-left overflow-hidden text-[#111827]">
+          <div class="p-5 pb-4 border-b border-[#e5e7eb] bg-[#f9fafb]">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center border-2 border-emerald-100">
+                <i data-lucide="calendar-range" class="w-6 h-6 text-emerald-500"></i>
+              </div>
+              <div>
+                <h2 class="text-[15px] font-black uppercase text-[#111827]">Reservas DML</h2>
+                <p class="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">${fmt(segunda)} a ${fmt(domingo)}</p>
+              </div>
+            </div>
+          </div>
+          <div class="p-5 max-h-[65vh] overflow-y-auto">
+            <p class="text-[9px] text-[#9ca3af] font-bold mb-3 uppercase tracking-wider">Selecione o setor:</p>
+            <div class="flex gap-1.5 flex-wrap mb-4">${htmlFiltros}</div>
+            <div id="listaReservasDmlRastreio">
+              <p class="text-[10px] text-[#9ca3af] text-center py-4">Selecione um DML acima para ver as reservas.</p>
+            </div>
+          </div>
+        </div>`,
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+    });
+  },
+
+  // Exibe detalhes de um pedido único (rastreio)
+  _mostrarResultadoRastreio(pedido) {
+    const statusKey = (pedido.status || "").toUpperCase();
+    const isAprov = statusKey.includes("APROVADA") && !statusKey.includes("NÃO");
+    const isReprov = statusKey.includes("NÃO");
+    const dotColor = isReprov ? "text-red-600 bg-red-50 border-red-200" : isAprov ? "text-emerald-600 bg-emerald-50 border-emerald-200" : "text-amber-600 bg-amber-50 border-amber-200";
+
+    Swal.fire({
+      title: '',
+      width: window.innerWidth < 768 ? "95%" : "480px",
+      padding: "0",
+      showCloseButton: true,
+      showConfirmButton: false,
+      html: `
+        <div class="text-left p-6 space-y-4 text-[#111827]">
+          <div class="text-center pb-4 border-b border-[#e5e7eb]">
+            <p class="text-[9px] font-black uppercase tracking-[0.2em] text-[#9ca3af] mb-1">Protocolo</p>
+            <h2 class="text-2xl font-black text-[#111827]">#${this._escHtml(pedido.id)}</h2>
+          </div>
+          <div class="p-3 rounded-xl border ${dotColor}">
+            <p class="text-[9px] font-black uppercase tracking-wider mb-0.5">Status Atual</p>
+            <p class="text-sm font-black uppercase">${this._escHtml(pedido.status)}</p>
+          </div>
+          <div class="grid grid-cols-2 gap-2">
+            <div class="bg-[#f3f4f6] p-3 rounded-xl"><p class="text-[8px] font-bold text-[#9ca3af] uppercase">Solicitante</p><p class="text-[11px] font-black text-[#111827]">${this._escHtml(pedido.nome)}</p></div>
+            <div class="bg-[#f3f4f6] p-3 rounded-xl"><p class="text-[8px] font-bold text-[#9ca3af] uppercase">Data</p><p class="text-[11px] font-black text-[#111827]">${this._escHtml(pedido.dt)}</p></div>
+            <div class="bg-[#f3f4f6] p-3 rounded-xl"><p class="text-[8px] font-bold text-[#9ca3af] uppercase">Equipe</p><p class="text-[11px] font-black text-[#111827]">${this._escHtml(pedido.equ)}</p></div>
+            <div class="bg-[#f3f4f6] p-3 rounded-xl"><p class="text-[8px] font-bold text-[#9ca3af] uppercase">Local</p><p class="text-[11px] font-black text-[#111827]">${this._escHtml(pedido.local || '---')}</p></div>
+          </div>
+          ${pedido.observacao ? `<div class="bg-violet-50 p-3 rounded-xl border border-violet-200"><p class="text-[8px] font-bold text-violet-500 uppercase mb-1">Observa\u00e7\u00e3o</p><p class="text-[11px] text-[#111827] font-medium">${this._escHtml(pedido.observacao)}</p></div>` : ''}
+          ${pedido.sap && pedido.sap !== "NÃO APROVADA" ? `<div class="bg-emerald-50 p-3 rounded-xl border border-emerald-200"><p class="text-[8px] font-bold text-emerald-500 uppercase mb-1">C\u00f3digo SAP</p><p class="text-sm font-black text-emerald-700">${this._escHtml(pedido.sap)}</p></div>` : ''}
+          <div class="border border-[#e5e7eb] rounded-2xl p-4">
+            <p class="text-[9px] font-black uppercase tracking-wider text-[#9ca3af] mb-3">Rastreio</p>
+            ${this._renderizarTimeline(pedido.timeline || '', pedido.status)}
+          </div>
+        </div>`,
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+    });
+  },
+
+  // =========================================================
+  // RASTREIO COMPLETO (EPI pessoal + Reservas DML da semana)
+  // =========================================================
+  _getReservasDmlSemana(filtroLocal) {
+    const { segunda, domingo } = this._getSemanaAtual();
+    const pedidos = State.pedidos || [];
+
+    const parseData = (p) => {
+      if (p.dataObj) {
+        let obj = p.dataObj;
+        if (typeof obj === "string" || typeof obj === "number") obj = new Date(obj);
+        if (obj instanceof Date && !isNaN(obj.getTime())) return obj;
+      }
+      const raw = String(p.dt || "").split(" ")[0];
+      if (raw.includes("/")) {
+        const d = raw.split("/");
+        if (d.length === 3 && parseInt(d[2]) > 1000) return new Date(parseInt(d[2]), parseInt(d[1]) - 1, parseInt(d[0]));
+      }
+      return null;
+    };
+
+    return pedidos.filter(p => {
+      const local = (p.local || "").toUpperCase();
+      if (!local.startsWith("DML")) return false;
+      if (filtroLocal && local !== filtroLocal.toUpperCase()) return false;
+      const dt = parseData(p);
+      if (!dt) return false;
+      return dt >= segunda && dt <= domingo;
+    });
+  },
+
+  _mostrarRastreioCompleto(matricula, epiPessoal) {
+    const largura = window.innerWidth < 768 ? "95%" : "560px";
+
+    // Monta HTML do histórico EPI pessoal
+    let htmlEpi = "";
+    if (epiPessoal.length > 0) {
+      htmlEpi = epiPessoal.map(h => {
+        const data = h.dt ? h.dt.split(" ")[0] : "--";
+        const statusKey = (h.status || "").toUpperCase();
+        const cor = statusKey.includes("APROVADA") && !statusKey.includes("NÃO") ? "text-emerald-600 bg-emerald-50 border-emerald-200" : statusKey.includes("NÃO") ? "text-red-600 bg-red-50 border-red-200" : "text-amber-600 bg-amber-50 border-amber-200";
+        return `<div class="flex items-center justify-between p-2.5 rounded-xl border ${cor} mb-2">
+          <div>
+            <p class="text-[10px] font-black uppercase">${this._escHtml(h.status)}</p>
+            <p class="text-[9px] font-bold text-[#9ca3af] mt-0.5">${data} - #${h.id || "N/A"}</p>
+          </div>
+          ${h.sap && h.sap !== "NÃO APROVADA" ? `<span class="text-[8px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-100">SAP: ${this._escHtml(h.sap)}</span>` : ""}
+        </div>`;
+      }).join("");
+    } else {
+      htmlEpi = `<p class="text-[10px] text-[#9ca3af] py-3 text-center">Nenhuma solicita\u00e7\u00e3o de EPI/Uniforme encontrada.</p>`;
+    }
+
+    // Coleta DMLs únicos da semana para montar os filtros
+    const todasReservasDml = this._getReservasDmlSemana(null);
+    const dmlsSet = new Set();
+    todasReservasDml.forEach(p => {
+      const local = (p.local || "").toUpperCase().trim();
+      if (local.startsWith("DML")) dmlsSet.add(local);
+    });
+    const dmls = Array.from(dmlsSet).sort();
+
+    let htmlFiltrosDml = dmls.map(dml => {
+      const label = dml.replace("DML_", "").replace(/_/g, " ");
+      return `<button onclick="UI._filtrarDmlRastreio('${dml}')" class="filtro-dml-rastreio text-[9px] font-black uppercase px-3 py-1.5 rounded-lg border border-zinc-200 text-zinc-400 bg-white transition-all cursor-pointer whitespace-nowrap hover:border-emerald-300">${label}</button>`;
+    }).join("");
+
+    if (dmls.length === 0) {
+      htmlFiltrosDml = `<span class="text-[9px] text-[#9ca3af]">Nenhuma reserva DML nesta semana.</span>`;
+    }
+
+    // Período da semana
+    const { segunda, domingo } = this._getSemanaAtual();
+    const fmt = (d) => `${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}`;
+
+    Swal.fire({
+      title: "",
+      width: largura,
+      padding: "0",
+      showCloseButton: true,
+      showConfirmButton: false,
+      html: `
+        <div class="text-left overflow-hidden text-[#111827]">
+          <!-- Header -->
+          <div class="p-5 pb-4 border-b border-[#e5e7eb] bg-[#f9fafb]">
+            <div class="flex items-center gap-3">
+              <div class="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center">
+                <i data-lucide="user" class="w-6 h-6 text-white"></i>
+              </div>
+              <div>
+                <h2 class="text-[15px] font-black uppercase text-[#111827]">Matr\u00edcula ${this._escHtml(matricula)}</h2>
+                <p class="text-[10px] font-bold text-[#9ca3af] uppercase tracking-wider">Hist\u00f3rico e reservas</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
+            <!-- Seção 1: EPI/Uniforme Pessoal -->
+            <div>
+              <div class="flex items-center gap-2 mb-3">
+                <i data-lucide="shield" class="w-4 h-4 text-blue-500"></i>
+                <p class="text-[10px] font-black uppercase tracking-[0.15em] text-[#111827]">Minhas Solicita\u00e7\u00f5es EPI/Uniforme</p>
+                <span class="text-[9px] font-bold text-[#9ca3af] bg-[#f3f4f6] px-2 py-0.5 rounded-lg">${epiPessoal.length}</span>
+              </div>
+              ${htmlEpi}
+            </div>
+
+            <!-- Seção 2: Reservas DML da Semana (de todos) -->
+            <div>
+              <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="calendar-range" class="w-4 h-4 text-emerald-500"></i>
+                <p class="text-[10px] font-black uppercase tracking-[0.15em] text-[#111827]">Reservas DML da Semana</p>
+                <span class="text-[9px] font-bold text-[#9ca3af] bg-[#f3f4f6] px-2 py-0.5 rounded-lg">${fmt(segunda)} a ${fmt(domingo)}</span>
+              </div>
+              <p class="text-[9px] text-[#9ca3af] font-bold mb-3">Selecione o setor para ver as reservas feitas por toda a equipe:</p>
+              <div class="flex gap-1.5 flex-wrap mb-3">${htmlFiltrosDml}</div>
+              <div id="listaReservasDmlRastreio"></div>
+            </div>
+          </div>
+        </div>`,
+      customClass: { popup: "swal2-popup-custom" },
+      didOpen: () => { if (window.lucide) window.lucide.createIcons(); },
+    });
+  },
+
+  _filtrarDmlRastreio(dml) {
+    // Atualiza visual dos botões
+    document.querySelectorAll(".filtro-dml-rastreio").forEach(btn => {
+      btn.classList.remove("filtro-reserva-ativo");
+      btn.classList.add("border-zinc-200", "text-zinc-400", "bg-white");
+    });
+    const btnAtivo = [...document.querySelectorAll(".filtro-dml-rastreio")].find(b =>
+      b.textContent.trim().toUpperCase() === dml.replace("DML_", "").replace(/_/g, " ")
+    );
+    if (btnAtivo) {
+      btnAtivo.classList.add("filtro-reserva-ativo");
+      btnAtivo.classList.remove("border-zinc-200", "text-zinc-400", "bg-white");
+    }
+
+    const reservas = this._getReservasDmlSemana(dml);
+    const container = document.getElementById("listaReservasDmlRastreio");
+    if (!container) return;
+
+    if (reservas.length === 0) {
+      container.innerHTML = `<p class="text-[10px] text-[#9ca3af] py-3 text-center">Nenhuma reserva para este DML nesta semana.</p>`;
+      return;
+    }
+
+    const diasSemana = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b"];
+
+    container.innerHTML = reservas.map(p => {
+      const statusKey = (p.status || "").toUpperCase();
+      const jaBaixada = statusKey.includes("BAIXADA");
+      const ehAprovada = statusKey.includes("APROVADA") && !statusKey.includes("NÃO");
+      const ehReprovada = statusKey.includes("NÃO");
+
+      let statusLabel, statusCor, statusIcon;
+      if (jaBaixada) {
+        statusLabel = "RETIRADO";
+        statusCor = "text-emerald-600 bg-emerald-50 border-emerald-200";
+        statusIcon = "check-circle";
+      } else if (ehAprovada) {
+        statusLabel = "AGUARDANDO RETIRADA";
+        statusCor = "text-amber-600 bg-amber-50 border-amber-200";
+        statusIcon = "clock";
+      } else if (ehReprovada) {
+        statusLabel = "N\u00c3O APROVADA";
+        statusCor = "text-red-600 bg-red-50 border-red-200";
+        statusIcon = "x-circle";
+      } else {
+        statusLabel = p.status || "PENDENTE";
+        statusCor = "text-zinc-600 bg-zinc-50 border-zinc-200";
+        statusIcon = "loader";
+      }
+
+      const hora = p.dt && p.dt.includes(" ") ? p.dt.split(" ")[1].substring(0, 5) : "??:??";
+      let dtParsed = p.dataObj;
+      if (typeof dtParsed === "string" || typeof dtParsed === "number") dtParsed = new Date(dtParsed);
+      if (!dtParsed || !(dtParsed instanceof Date) || isNaN(dtParsed.getTime())) {
+        const raw = String(p.dt || "").split(" ")[0];
+        if (raw.includes("/")) { const d = raw.split("/"); dtParsed = new Date(parseInt(d[2]), parseInt(d[1])-1, parseInt(d[0])); }
+      }
+      const dataCurta = dtParsed && !isNaN(dtParsed.getTime()) ? `${diasSemana[dtParsed.getDay()]} ${String(dtParsed.getDate()).padStart(2,"0")}/${String(dtParsed.getMonth()+1).padStart(2,"0")}` : "--";
+      const nomeCurto = (p.nome || "").split(" ").slice(0, 2).join(" ");
+
+      // Parse dos itens com status de aprovação
+      const itensRaw = p.its || "";
+      const itensArr = itensRaw.split("|").map(i => i.trim()).filter(Boolean);
+      const itensHtml = itensArr.length > 0 ? itensArr.map(item => {
+        const upper = item.toUpperCase();
+        const ehNao = upper.includes("{NAO}");
+        const ehFalta = upper.includes("{FALTA}");
+        const ehOk = upper.includes("{OK}");
+        const limpo = item.replace(/\s*\{[^}]*\}/g, "").replace(/\s*\[\d{4,}\]/g, "").trim();
+        let cor = "text-zinc-600 bg-white/80 border-zinc-200"; // pendente
+        if (ehNao) cor = "text-red-600 bg-red-50 border-red-200 line-through";
+        else if (ehFalta) cor = "text-orange-600 bg-orange-50 border-orange-200";
+        else if (ehOk) cor = "text-emerald-700 bg-emerald-50 border-emerald-200";
+        return `<span class="inline-block text-[9px] font-bold ${cor} px-2 py-0.5 rounded-md mr-1 mb-1 border">${this._escHtml(limpo)}</span>`;
+      }).join("") : "";
+
+      return `
+        <div class="p-3 rounded-xl border ${statusCor} mb-2">
+          <div class="flex items-center justify-between mb-1.5">
+            <div class="flex items-center gap-2">
+              <i data-lucide="${statusIcon}" class="w-4 h-4"></i>
+              <span class="text-[10px] font-black uppercase">${statusLabel}</span>
+            </div>
+            <span class="text-[9px] font-bold text-[#9ca3af]">${dataCurta} ${hora}</span>
+          </div>
+          <div class="mb-2">
+            <p class="text-[11px] font-bold text-[#111827]">${this._escHtml(nomeCurto)}</p>
+            <p class="text-[9px] font-bold text-[#9ca3af]">Mat: ${this._escHtml(p.mat)} | #${p.id || "N/A"}</p>
+          </div>
+          ${itensHtml ? `<div class="flex flex-wrap pt-1.5 border-t border-current/10">${itensHtml}</div>` : ""}
+          ${p.sap && p.sap !== "NÃO APROVADA" ? `<div class="mt-1.5 pt-1.5 border-t border-current/10"><span class="text-[8px] font-black text-emerald-700 bg-emerald-100 px-2 py-1 rounded-lg">SAP: ${this._escHtml(p.sap)}</span></div>` : ""}
+        </div>`;
+    }).join("");
+
+    if (window.lucide) window.lucide.createIcons();
   },
 };

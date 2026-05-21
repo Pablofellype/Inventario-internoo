@@ -280,3 +280,10 @@ img.img-preview {
 ::-webkit-scrollbar-thumb:hover {
   background: #f40009;
 }
+
+/* Filtro Reservas Ativo */
+.filtro-reserva-ativo {
+  background: #10b981 !important;
+  color: #fff !important;
+  border-color: #10b981 !important;
+}
